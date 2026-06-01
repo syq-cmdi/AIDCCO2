@@ -24,6 +24,7 @@ The app exposes three main operator surfaces:
 Generated screenshots are stored under `artifacts/`:
 
 - `artifacts/aidc-campus-bigscreen.png`
+- `artifacts/aidc-campus-photoreal-aerial.png`
 - `artifacts/aidc-photoreal-twin.png`
 - `artifacts/aidc-photoreal-twin-crop.png`
 
@@ -214,6 +215,11 @@ This view is intentionally operational and dense. It is designed for wall displa
 
 The browser runtime uses Three.js PBR materials for:
 
+- high-angle aerial campus rendering
+- sage-green AI compute halls with silver metallic roofs
+- rooftop high-density cooling equipment, CDU, fans, pumps, and pipe headers
+- roads, parking, security fencing, and campus hardscape
+- surrounding agricultural fields and distant wind turbines for 24/7 CFE context
 - anti-static floor tiles
 - wall and roof panels
 - glass containment
@@ -222,6 +228,14 @@ The browser runtime uses Three.js PBR materials for:
 - electrical cabinets
 - chillers, pumps, CDU, CRAH
 - racks, server blades, PCB, and chip packages
+
+The `/bigscreen` campus scene includes subtle digital-twin overlays:
+
+- carbon-intensity heatmap plates on roofs
+- animated chilled-water, power, CFE, and emissions flow lines
+- floating PUE, CFE, quota, and location-based carbon KPI rings
+- moving cooling fans and wind-turbine rotors
+- atmospheric daylight haze for an Omniverse/RTX-style presentation baseline
 
 The engineering-signoff target is OpenUSD / Omniverse:
 
