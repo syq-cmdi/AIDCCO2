@@ -28,6 +28,68 @@ Generated screenshots are stored under `artifacts/`:
 - `artifacts/aidc-photoreal-twin.png`
 - `artifacts/aidc-photoreal-twin-crop.png`
 
+![AIDC campus photoreal digital twin](artifacts/aidc-campus-photoreal-aerial.png)
+
+## 中文说明
+
+本项目是一个面向 AIDC / AI Data Center / 智算中心的二氧化碳全生命周期排放监控平台原型。平台目标不是只做静态碳报表，而是把园区、建筑、机房、机柜、服务器和芯片级运行数据统一到同一套数字孪生与碳核查口径中，用于近实时碳 MRV、配额监控、生命周期核算、24/7 零碳电力匹配和 AI 降碳优化。
+
+当前平台采用“站点 + 电网”为核心边界，支持 Scope 1、Scope 2、Scope 3 分层核算。其中 Scope 2 同时输出 location-based 和 market-based，EAC / REC / GO / I-REC / PPA / offset 不会扣减物理排放、SCI 或服务器层碳强度；避免排放只作为单独披露。
+
+### 中文页面入口
+
+- `/`：运营工作台，展示 PUE、CUE、WUE、REF、Scope 1/2/3、配额风险、24/7 CFE 匹配、AI 优化建议和证据包状态。
+- `/bigscreen`：园区级数字大屏，用于指挥中心或大屏墙，包含高真实感 Three.js 园区数字孪生、实时碳流、电力、冷却、水、配额和 CFE 监控。
+- `/bms`：工业动环监控界面，风格参考西门子 / Honeywell 类 BMS、EPMS、冷源群控系统，包含机房平面图、冷冻水 / 冷却水 P&ID、参数设定、告警、CCTV 和协议状态。
+
+### 高真实感数字孪生增强
+
+`/bigscreen` 的园区场景已经增强为高角度航拍式数字孪生，重点加入：
+
+- 多栋鼠尾草绿色 AI 算力楼和银色金属屋顶
+- 屋顶高密度冷却设备、CDU、风扇、泵组和复杂管线
+- 园区道路、停车区、安防围栏、硬化地面和运维资产
+- 周边农业绿地和远处风机，用于表达 24/7 CFE 匹配场景
+- 屋顶碳强度热力图、冷冻水 / 电力 / 绿电 / 排放流线
+- PUE、CFE、配额、location-based 碳排放浮动 KPI 环
+- 冷却风扇、风机转子和能流粒子的实时动画
+
+这部分仍是浏览器原生 Three.js PBR 运行孪生，适合监控平台和演示大屏。工程签核级别的高保真模型应继续使用 Rhino / IFC / 点云 / OpenUSD / Omniverse / CFD 工具链，并将校核结果回写到平台资产与遥测模型中。
+
+### 快速运行
+
+```bash
+npm install
+npm run dev:web
+```
+
+打开：
+
+```text
+http://localhost:3000
+http://localhost:3000/bigscreen
+http://localhost:3000/bms
+```
+
+API 方法引擎：
+
+```bash
+cd services/api
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+测试：
+
+```bash
+npm run lint:web
+npm run build:web
+.venv/bin/pytest services/api
+```
+
+### 生产化接入边界
+
+真实部署时需要接入 DCIM、BMS、EPMS、PDU、UPS、智能电表、水表、GPU 调度器、Redfish / NVML、BIM / IFC、设备 LCA / EPD、PPA / EAC / REC / granular certificate、区域电网碳强度和边际排放因子。当前仓库使用确定性演示数据，不替代审计签核；排放因子、证据留存、配额规则和核证流程需要按具体地区和组织边界配置。
+
 ## Architecture
 
 ```mermaid
