@@ -1,0 +1,41 @@
+{
+  "platform": "AIDC cabinet-level carbon digital twin",
+  "default_hierarchy": "campus/building/room/rack/server/chip",
+  "tools": [
+    {
+      "name": "Rhino 8",
+      "type": "commercial_cad",
+      "official_url": "https://www.rhino3d.com/download/",
+      "status": "optional_license_required",
+      "integration": "Export 3DM/GLB/FBX/OBJ or call Rhino.Compute for geometry and Grasshopper automation."
+    },
+    {
+      "name": "Rhino.Compute",
+      "type": "geometry_rest_api",
+      "official_url": "https://developer.rhino3d.com/guides/compute/",
+      "status": "optional_license_required",
+      "integration": "Use REST endpoints for Grasshopper definitions, clearance checks, pipe routing, and geometry validation."
+    },
+    {
+      "name": "rhino3dm",
+      "type": "open_3dm_library",
+      "official_url": "https://www.rhino3d.com/features/developer/rhino3dm/",
+      "status": "installed_npm",
+      "integration": "Read/write Rhino 3DM metadata in JavaScript services without requiring Rhino desktop."
+    },
+    {
+      "name": "Speckle",
+      "type": "model_hub",
+      "official_url": "https://docs.speckle.systems/connectors",
+      "status": "configured_manifest",
+      "integration": "Version model objects and sync Rhino/Grasshopper/Revit/Blender/IFC metadata into the platform."
+    },
+    {
+      "name": "Three.js",
+      "type": "web_3d_engine",
+      "official_url": "https://threejs.org/",
+      "status": "installed_npm",
+      "integration": "Render rack-level WebGL scene and telemetry overlays in the dashboard."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "aidc-co2-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AIDC lifecycle carbon monitoring platform with NRT dMRV, quota monitoring, 24/7 CFE matching, and AI decarbonization recommendations.",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace apps/web run dev",
+    "build:web": "npm --workspace apps/web run build",
+    "lint:web": "npm --workspace apps/web run lint",
+    "dev:api": "cd services/api && uvicorn app.main:app --reload --port 8000",
+    "test:api": "cd services/api && pytest"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "rhino3dm": "^8.17.0",
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.184.1"
+  }
+}

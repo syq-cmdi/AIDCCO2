@@ -1,0 +1,50 @@
+{
+  "site_id": "aidc-sg-01",
+  "target": "Omniverse/OpenUSD photoreal digital twin with server/chip-layer carbon audit parity and envelope/MEP topology",
+  "authoritative_scene_graph": "omniverse://aidc-sg-01/stages/campus_root.usd",
+  "web_runtime": "glb://aidc-sg-01/web-runtime/campus_lod2.glb",
+  "renderers": [
+    "Omniverse RTX Real-Time 2.0",
+    "Omniverse RTX Interactive Path Tracing",
+    "Three.js PBR fallback"
+  ],
+  "tool_integrations": [
+    {
+      "name": "NVIDIA Omniverse Kit SDK",
+      "official_url": "https://docs.nvidia.com/omniverse/index.html",
+      "runtime_status": "requires_license",
+      "connector": "Kit extension: aidc.carbon.audit"
+    },
+    {
+      "name": "Omniverse RTX Renderer",
+      "official_url": "https://docs.omniverse.nvidia.com/composer/latest/feature_rendering.html",
+      "runtime_status": "requires_license",
+      "connector": "USD render settings and material QA"
+    },
+    {
+      "name": "OpenUSD",
+      "official_url": "https://openusd.org/",
+      "runtime_status": "configured_contract",
+      "connector": "USD prim metadata schema"
+    },
+    {
+      "name": "openLCA IPC",
+      "official_url": "https://pypi.org/project/openlca-ipc/",
+      "runtime_status": "planned",
+      "connector": "LCA component calculation service"
+    },
+    {
+      "name": "GHG Protocol Scope 2",
+      "official_url": "https://ghgprotocol.org/scope-2-guidance",
+      "runtime_status": "configured",
+      "connector": "Hourly matching and certificate evidence"
+    }
+  ],
+  "quality_gates": [
+    "rack anchor residual <= 20 mm",
+    "stable OpenUSD prim paths for rack/server/chip and envelope/MEP IDs",
+    "path-traced sign-off render for audited model version",
+    "server-to-campus carbon reconciliation delta <= 0.1%",
+    "offsets and avoided emissions never reduce physical emissions"
+  ]
+}

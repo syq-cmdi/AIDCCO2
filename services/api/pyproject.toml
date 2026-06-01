@@ -1,0 +1,20 @@
+[project]
+name = "aidc-carbon-api"
+version = "0.1.0"
+description = "FastAPI method engine for AIDC lifecycle carbon monitoring."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.6",
+  "uvicorn[standard]>=0.32.1",
+  "pydantic>=2.10.3"
+]
+
+[project.optional-dependencies]
+test = [
+  "httpx>=0.28.1",
+  "pytest>=8.3.4"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
