@@ -26,6 +26,7 @@ import { useEffect, useMemo, useState } from "react";
 import TwinScene from "../components/TwinScene";
 import { loadChipSimulation, loadDigitalTwin, loadMatching, loadOmniversePolicy, loadQuotaStatus, loadRealtimeMetrics, type ChipSimulationResponse, type DigitalTwinResponse, type MatchingResult, type OmniverseFidelityPolicy, type QuotaStatus, type RackTwin, type RealtimeMetrics } from "../lib/api";
 import { cfeMatched, fallbackChipSimulation, fallbackDigitalTwin, fallbackMatching, fallbackOmniversePolicy, fallbackQuota, fallbackRealtime, hourlyCarbon, hourlyLoad, optimizerItems } from "../lib/sample";
+import { aidcPathwayScenarios, assessAidcPathway, type PathwayAssessment, type PathwayHorizon, type PathwayPoint } from "../lib/pathways";
 
 type MetricCardProps = {
   label: string;
@@ -43,6 +44,7 @@ const navItems = [
   { icon: Droplets, label: "机电" },
   { icon: Cpu, label: "芯片" },
   { icon: Activity, label: "实时" },
+  { icon: LineChart, label: "路径评测" },
   { icon: HardDrive, label: "Server核查" },
   { icon: ShieldCheck, label: "配额" },
   { icon: Leaf, label: "24/7 CFE" },
@@ -178,6 +180,193 @@ function MatchingPanel({ matching }: { matching: MatchingResult }) {
         <span>{formatNumber(matching.avoided_emissions_kg_co2e / 1000, 1)} tCO2e avoided</span>
         <span>{formatNumber(matching.unmatched_load_kwh, 0)} kWh unmatched</span>
       </div>
+    </section>
+  );
+}
+
+function formatTco2e(value: number, digits = 1) {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) {
+    return `${formatNumber(value / 1_000_000, digits)} MtCO2e`;
+  }
+  if (abs >= 1_000) {
+    return `${formatNumber(value / 1_000, digits)} ktCO2e`;
+  }
+  return `${formatNumber(value, 0)} tCO2e`;
+}
+
+function buildPath(points: PathwayPoint[], key: keyof PathwayPoint, xScale: (year: number) => number, yScale: (value: number) => number) {
+  return points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${xScale(point.year).toFixed(2)} ${yScale(Number(point[key])).toFixed(2)}`)
+    .join(" ");
+}
+
+function PathwayChart({ assessment }: { assessment: PathwayAssessment }) {
+  const { points } = assessment;
+  const width = 920;
+  const height = 360;
+  const pad = { left: 74, right: 24, top: 28, bottom: 46 };
+  const years = points.map((point) => point.year);
+  const minYear = Math.min(...years);
+  const maxYear = Math.max(...years);
+  const minValue = Math.min(0, ...points.map((point) => point.low));
+  const maxValue = Math.max(...points.flatMap((point) => [point.high, point.budget, point.embodied])) * 1.08;
+  const xScale = (year: number) => pad.left + ((year - minYear) / Math.max(maxYear - minYear, 1)) * (width - pad.left - pad.right);
+  const yScale = (value: number) => pad.top + (1 - (value - minValue) / Math.max(maxValue - minValue, 1)) * (height - pad.top - pad.bottom);
+  const uncertainty =
+    points.map((point) => `${xScale(point.year).toFixed(2)},${yScale(point.high).toFixed(2)}`).join(" ") +
+    " " +
+    [...points].reverse().map((point) => `${xScale(point.year).toFixed(2)},${yScale(point.low).toFixed(2)}`).join(" ");
+  const ticks = assessment.horizon === 2050 ? [2026, 2030, 2035, 2040, 2045, 2050] : [2026, 2030, 2040, 2050, 2075, 2100];
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((fraction) => minValue + (maxValue - minValue) * fraction);
+
+  return (
+    <svg className="pathway-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="AIDC carbon neutrality pathway chart">
+      <defs>
+        <linearGradient id="pathway-uncertainty" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#2364aa" stopOpacity="0.24" />
+          <stop offset="100%" stopColor="#2364aa" stopOpacity="0.05" />
+        </linearGradient>
+      </defs>
+      {yTicks.map((tick) => (
+        <g key={tick}>
+          <line x1={pad.left} x2={width - pad.right} y1={yScale(tick)} y2={yScale(tick)} />
+          <text x={pad.left - 12} y={yScale(tick) + 4} textAnchor="end">{formatTco2e(tick, 1).replace("CO2e", "")}</text>
+        </g>
+      ))}
+      <polygon points={uncertainty} fill="url(#pathway-uncertainty)" />
+      <path className="pathway-chart__budget" d={buildPath(points, "budget", xScale, yScale)} />
+      <path className="pathway-chart__market" d={buildPath(points, "market", xScale, yScale)} />
+      <path className="pathway-chart__embodied" d={buildPath(points, "embodied", xScale, yScale)} />
+      <path className="pathway-chart__physical" d={buildPath(points, "physical", xScale, yScale)} />
+      {points.filter((point) => point.year % 5 === 0 || point.year === minYear || point.year === maxYear).map((point) => {
+        const exceeds = point.physical > point.budget;
+        return (
+          <rect
+            className={exceeds ? "pathway-chart__overshoot active" : "pathway-chart__overshoot"}
+            height="8"
+            key={point.year}
+            rx="3"
+            width={Math.max((width - pad.left - pad.right) / points.length - 1, 2)}
+            x={xScale(point.year) - 3}
+            y={height - 28}
+          />
+        );
+      })}
+      {ticks.map((year) => (
+        <text key={year} x={xScale(year)} y={height - 9} textAnchor="middle">{year}</text>
+      ))}
+      <text className="pathway-chart__axis" x={pad.left} y={18}>annual physical emissions, tCO2e</text>
+      <text className="pathway-chart__threshold" x={xScale(2050)} y={yScale(0) - 10} textAnchor="middle">net-zero line</text>
+    </svg>
+  );
+}
+
+function PathwayPanel({
+  assessment,
+  horizon,
+  scenarioId,
+  annualBaselineTco2e,
+  onHorizonChange,
+  onScenarioChange
+}: {
+  assessment: PathwayAssessment;
+  horizon: PathwayHorizon;
+  scenarioId: string;
+  annualBaselineTco2e: number;
+  onHorizonChange: (horizon: PathwayHorizon) => void;
+  onScenarioChange: (scenarioId: string) => void;
+}) {
+  const overshootLabel = assessment.firstOvershootYear
+    ? `${assessment.firstOvershootYear} 起 ${assessment.overshootYears} 年`
+    : "未超标";
+  const netZeroLabel = assessment.netZeroYear ? String(assessment.netZeroYear) : "未达成";
+
+  return (
+    <section className="panel pathway-panel" id="路径评测">
+      <div className="panel-heading">
+        <div>
+          <span className="eyebrow">Carbon-neutrality pathway evaluator</span>
+          <h2>AIDC 情景路径与科学配额评测</h2>
+        </div>
+        <LineChart size={22} />
+      </div>
+      <div className="pathway-controls">
+        <label>
+          <span>情景</span>
+          <select value={scenarioId} onChange={(event) => onScenarioChange(event.target.value)}>
+            {aidcPathwayScenarios.map((scenario) => (
+              <option key={scenario.id} value={scenario.id}>
+                {scenario.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="pathway-toggle" aria-label="评测时间范围">
+          {[2050, 2100].map((year) => (
+            <button className={horizon === year ? "active" : ""} key={year} onClick={() => onHorizonChange(year as PathwayHorizon)} type="button">
+              {year}
+            </button>
+          ))}
+        </div>
+        <div className="pathway-baseline">
+          <span>当前年化基线</span>
+          <strong>{formatTco2e(annualBaselineTco2e, 2)}</strong>
+        </div>
+      </div>
+      <div className="pathway-layout">
+        <div className="pathway-plot">
+          <PathwayChart assessment={assessment} />
+          <div className="pathway-legend">
+            <span><i className="physical" />location-based 物理排放</span>
+            <span><i className="budget" />科学配额路径</span>
+            <span><i className="market" />market-based 披露线</span>
+            <span><i className="embodied" />硬件与建筑 LCA</span>
+            <span><i className="band" />情景不确定性</span>
+          </div>
+        </div>
+        <aside className="pathway-summary">
+          <div className={assessment.scenario.compatible ? "scenario-badge compatible" : "scenario-badge"}>
+            <strong>{assessment.scenario.shortLabel}</strong>
+            <span>{assessment.scenario.category}</span>
+          </div>
+          <p>{assessment.scenario.description}</p>
+          <div className="pathway-keyfigures">
+            <div>
+              <span>2030 vs 基线</span>
+              <strong>{formatNumber(assessment.reduction2030 * 100, 1)}%</strong>
+            </div>
+            <div>
+              <span>2050 vs 基线</span>
+              <strong>{formatNumber(assessment.reduction2050 * 100, 1)}%</strong>
+            </div>
+            <div>
+              <span>净零年份</span>
+              <strong>{netZeroLabel}</strong>
+            </div>
+            <div>
+              <span>超配额期</span>
+              <strong>{overshootLabel}</strong>
+            </div>
+            <div>
+              <span>累计超额</span>
+              <strong>{formatTco2e(assessment.budgetOvershoot, 1)}</strong>
+            </div>
+            <div>
+              <span>2050 CFE</span>
+              <strong>{formatNumber(assessment.cfe2050 * 100, 0)}%</strong>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <div className="pathway-levers">
+        {assessment.scenario.levers.map((lever) => (
+          <span key={lever}>{lever}</span>
+        ))}
+      </div>
+      <p className="pathway-note">
+        该评测借鉴 Carbon Brief 交互式路径工具的场景选择、阈值超标期、不确定性区间和关键指标卡设计，但研究对象限定为 AIDC 站点+电网边界；offset 和 avoided emissions 不抵扣物理排放路径。
+      </p>
     </section>
   );
 }
@@ -528,6 +717,8 @@ export default function DashboardPage() {
   const [omniversePolicy, setOmniversePolicy] = useState<OmniverseFidelityPolicy>(fallbackOmniversePolicy);
   const [chipSimulation, setChipSimulation] = useState<ChipSimulationResponse>(fallbackChipSimulation);
   const [selectedRackId, setSelectedRackId] = useState<string>(fallbackDigitalTwin.campus.buildings[0].rooms[0].racks[0].id);
+  const [selectedPathwayId, setSelectedPathwayId] = useState<string>(aidcPathwayScenarios[0].id);
+  const [pathwayHorizon, setPathwayHorizon] = useState<PathwayHorizon>(2050);
 
   useEffect(() => {
     let isMounted = true;
@@ -599,6 +790,15 @@ export default function DashboardPage() {
   );
   const allRacks = useMemo(() => flattenRacks(digitalTwin), [digitalTwin]);
   const selectedRack = allRacks.find((rack) => rack.id === selectedRackId) ?? allRacks[0];
+  const annualBaselineTco2e = useMemo(() => {
+    const intervalKg = getMetric(metrics, "location_based_emissions_kg", fallbackRealtime.metrics.location_based_emissions_kg.value);
+    const intervalMinutes = Math.max(metrics.interval_minutes, 1);
+    return Math.max((intervalKg * (60 / intervalMinutes) * 24 * 365) / 1000, 1);
+  }, [metrics]);
+  const pathwayAssessment = useMemo(
+    () => assessAidcPathway(selectedPathwayId, pathwayHorizon, annualBaselineTco2e),
+    [annualBaselineTco2e, pathwayHorizon, selectedPathwayId]
+  );
 
   useEffect(() => {
     if (!selectedRack) {
@@ -678,6 +878,14 @@ export default function DashboardPage() {
         </section>
 
         <section className="workspace-grid">
+          <PathwayPanel
+            annualBaselineTco2e={annualBaselineTco2e}
+            assessment={pathwayAssessment}
+            horizon={pathwayHorizon}
+            onHorizonChange={setPathwayHorizon}
+            onScenarioChange={setSelectedPathwayId}
+            scenarioId={selectedPathwayId}
+          />
           {selectedRack ? (
             <section className="panel twin-panel" id="孪生">
               <div className="panel-heading">

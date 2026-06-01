@@ -585,6 +585,287 @@ select {
   font-weight: 700;
 }
 
+.pathway-panel {
+  grid-column: 1 / -1;
+  min-height: 620px;
+}
+
+.pathway-controls {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto minmax(190px, auto);
+  gap: 12px;
+  align-items: end;
+  margin-top: 18px;
+}
+
+.pathway-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pathway-controls select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 0 12px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.pathway-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(2, 1fr);
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #eef3f5;
+  padding: 4px;
+}
+
+.pathway-toggle button {
+  min-width: 72px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.pathway-toggle button.active {
+  background: #101820;
+  color: #ffffff;
+}
+
+.pathway-baseline {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 8px 12px;
+}
+
+.pathway-baseline span,
+.pathway-keyfigures span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.pathway-baseline strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.15;
+}
+
+.pathway-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.pathway-plot,
+.pathway-summary {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 14px;
+}
+
+.pathway-chart {
+  display: block;
+  width: 100%;
+  min-height: 320px;
+}
+
+.pathway-chart line {
+  stroke: #dbe5ec;
+  stroke-width: 1;
+}
+
+.pathway-chart text {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pathway-chart__axis {
+  fill: var(--ink);
+  font-size: 13px;
+}
+
+.pathway-chart__threshold {
+  fill: var(--green);
+  font-size: 12px;
+}
+
+.pathway-chart__physical,
+.pathway-chart__budget,
+.pathway-chart__market,
+.pathway-chart__embodied {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pathway-chart__physical {
+  stroke: #c44e3a;
+  stroke-width: 4.5;
+}
+
+.pathway-chart__budget {
+  stroke: #1f7a5c;
+  stroke-width: 3.5;
+  stroke-dasharray: 8 7;
+}
+
+.pathway-chart__market {
+  stroke: #2364aa;
+  stroke-width: 2.5;
+  stroke-dasharray: 4 6;
+}
+
+.pathway-chart__embodied {
+  stroke: #a66b00;
+  stroke-width: 2.25;
+  stroke-dasharray: 2 7;
+}
+
+.pathway-chart__overshoot {
+  fill: #d9e3ea;
+}
+
+.pathway-chart__overshoot.active {
+  fill: #c44e3a;
+}
+
+.pathway-legend,
+.pathway-levers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pathway-legend span,
+.pathway-levers span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0 9px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pathway-legend i {
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.pathway-legend .physical {
+  background: #c44e3a;
+}
+
+.pathway-legend .budget {
+  background: repeating-linear-gradient(90deg, #1f7a5c 0 6px, transparent 6px 10px);
+}
+
+.pathway-legend .market {
+  background: repeating-linear-gradient(90deg, #2364aa 0 4px, transparent 4px 8px);
+}
+
+.pathway-legend .embodied {
+  background: repeating-linear-gradient(90deg, #a66b00 0 2px, transparent 2px 6px);
+}
+
+.pathway-legend .band {
+  height: 9px;
+  background: rgba(35, 100, 170, 0.18);
+}
+
+.scenario-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  border: 1px solid rgba(196, 78, 58, 0.26);
+  border-radius: 8px;
+  background: #fff3f0;
+  padding: 0 12px;
+}
+
+.scenario-badge.compatible {
+  border-color: rgba(31, 122, 92, 0.28);
+  background: #edf8f3;
+}
+
+.scenario-badge strong {
+  font-size: 18px;
+}
+
+.scenario-badge span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.pathway-summary p {
+  margin: 14px 0 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.pathway-keyfigures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pathway-keyfigures div {
+  min-height: 74px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.pathway-keyfigures strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 16px;
+  line-height: 1.18;
+}
+
+.pathway-levers span {
+  background: #f7fafb;
+}
+
+.pathway-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .legend {
   display: inline-block;
   width: 9px;
@@ -2167,8 +2448,17 @@ select {
 
   .fidelity-layout,
   .fidelity-grid,
-  .mep-columns {
+  .mep-columns,
+  .pathway-layout {
     grid-template-columns: 1fr;
+  }
+
+  .pathway-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .pathway-baseline {
+    grid-column: 1 / -1;
   }
 
   .bigscreen-kpis {
@@ -2247,7 +2537,8 @@ select {
 
   .power-panel,
   .audit-panel,
-  .optimizer-panel {
+  .optimizer-panel,
+  .pathway-panel {
     grid-column: span 1;
   }
 
@@ -2274,8 +2565,18 @@ select {
   .system-kpis,
   .chip-kpis,
   .chip-table,
+  .pathway-controls,
+  .pathway-keyfigures,
   .ring-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pathway-toggle {
+    width: 100%;
+  }
+
+  .pathway-chart {
+    min-height: 260px;
   }
 
   .chip-heatmap {
