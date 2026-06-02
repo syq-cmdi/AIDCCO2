@@ -119,6 +119,24 @@ function MetricCard({ label, value, unit, helper, tone, icon }: MetricCardProps)
   );
 }
 
+function BuptPortalEntry() {
+  return (
+    <section className="bupt-entry">
+      <div>
+        <span className="eyebrow">BUPT.AI Secondary Site</span>
+        <h2>北邮 AI · AIDC 碳中和数字孪生子站</h2>
+        <p>面向 bupt.ai 发布的二级站入口，集中展示 AIDC 机柜级碳核查、园区大屏、动环监控和路径评测工具。</p>
+      </div>
+      <div className="bupt-entry__actions">
+        <a className="bupt-entry__primary" href="/bupt-ai">
+          进入 BUPT.AI 子站
+        </a>
+        <span>可绑定: bupt.ai/aidcco2 · aidcco2.bupt.ai</span>
+      </div>
+    </section>
+  );
+}
+
 function Sparkline({ points, color }: { points: number[]; color: string }) {
   const max = Math.max(...points);
   const min = Math.min(...points);
@@ -1090,6 +1108,7 @@ export default function DashboardPage() {
             <span className="status-dot" />
             <span>{metrics.site_id}</span>
             <span>{new Date(metrics.generated_at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
+            <a className="topbar-screen-link" href="/bupt-ai">BUPT.AI子站</a>
             <a className="topbar-screen-link" href="/bms">动环监控</a>
             <a className="topbar-screen-link" href="/bigscreen">园区大屏</a>
           </div>
@@ -1100,6 +1119,8 @@ export default function DashboardPage() {
             <MetricCard key={card.label} {...card} />
           ))}
         </section>
+
+        <BuptPortalEntry />
 
         <section className="workbench-shell">
           <section className="tool-hero">
