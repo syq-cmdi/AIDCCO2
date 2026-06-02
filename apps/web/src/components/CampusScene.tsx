@@ -447,7 +447,7 @@ export default function CampusScene({ twin, metrics, matching, quota }: CampusSc
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.06;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -676,9 +676,9 @@ export default function CampusScene({ twin, metrics, matching, quota }: CampusSc
     resizeObserver.observe(container);
 
     let frameId = 0;
-    const clock = new THREE.Clock();
+    const animationStart = performance.now();
     const animate = () => {
-      const elapsed = clock.getElapsedTime();
+      const elapsed = (performance.now() - animationStart) / 1000;
       flowMarkers.forEach((item) => {
         item.mesh.position.copy(item.curve.getPoint((item.phase + elapsed * item.speed) % 1));
       });
