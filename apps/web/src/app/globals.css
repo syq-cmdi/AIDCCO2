@@ -52,6 +52,10 @@ select {
   font: inherit;
 }
 
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .dashboard {
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
@@ -97,7 +101,8 @@ select {
   gap: 8px;
 }
 
-.sidebar a {
+.sidebar a,
+.sidebar button {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -107,10 +112,27 @@ select {
   color: #c8d3dc;
 }
 
+.sidebar button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
 .sidebar a:first-child,
-.sidebar a:hover {
+.sidebar a:hover,
+.sidebar button.active,
+.sidebar button:hover {
   background: #1b2a35;
   color: #ffffff;
+}
+
+.sidebar button:focus-visible,
+.pathway-toggle button:focus-visible,
+.pathway-controls select:focus-visible {
+  outline: 3px solid rgba(118, 215, 178, 0.45);
+  outline-offset: 2px;
 }
 
 .content {
@@ -179,6 +201,70 @@ select {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 14px;
+}
+
+.workbench-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.tool-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.82fr);
+  gap: 16px;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(223, 241, 233, 0.72), rgba(225, 236, 248, 0.76)),
+    #ffffff;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.tool-hero h2 {
+  margin: 6px 0 0;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.tool-hero p {
+  max-width: 920px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.quick-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quick-stat-grid article {
+  min-height: 92px;
+  border: 1px solid rgba(16, 24, 32, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 12px;
+}
+
+.quick-stat-grid span,
+.quick-stat-grid small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.quick-stat-grid strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 25px;
+  line-height: 1;
 }
 
 .metric-card,
@@ -268,6 +354,36 @@ select {
   display: grid;
   grid-template-columns: 1.25fr 0.95fr 0.95fr;
   gap: 14px;
+}
+
+.pathway-workspace,
+.quota-workspace,
+.optimizer-workspace,
+.fidelity-workspace {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pathway-workspace .pathway-panel,
+.fidelity-workspace .fidelity-panel {
+  grid-column: 1 / -1;
+}
+
+.twin-workspace {
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+}
+
+.twin-workspace .twin-panel {
+  grid-column: 1 / -1;
+}
+
+.systems-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.82fr);
+}
+
+.systems-workspace .power-panel,
+.systems-workspace .mep-panel,
+.optimizer-workspace .optimizer-panel {
+  grid-column: span 1;
 }
 
 .panel {
@@ -2430,8 +2546,18 @@ select {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .workspace-grid {
+  .workspace-grid,
+  .pathway-workspace,
+  .quota-workspace,
+  .optimizer-workspace,
+  .fidelity-workspace,
+  .twin-workspace,
+  .systems-workspace {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tool-hero {
+    grid-template-columns: 1fr;
   }
 
   .matching-panel,
@@ -2493,14 +2619,15 @@ select {
     position: sticky;
     top: 0;
     z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 10px;
     min-width: 0;
     border-right: 0;
     border-bottom: 1px solid #263846;
     padding: 12px;
-    overflow-x: auto;
+    overflow: hidden;
   }
 
   .brand {
@@ -2508,8 +2635,15 @@ select {
   }
 
   .sidebar nav {
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .sidebar button {
+    flex: 0 0 auto;
+    width: auto;
+    white-space: nowrap;
   }
 
   .content {
@@ -2531,8 +2665,18 @@ select {
 
   .metric-grid,
   .workspace-grid,
+  .pathway-workspace,
+  .quota-workspace,
+  .optimizer-workspace,
+  .fidelity-workspace,
+  .twin-workspace,
+  .systems-workspace,
   .bigscreen-kpis {
     grid-template-columns: 1fr;
+  }
+
+  .quick-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .power-panel,
@@ -2567,6 +2711,7 @@ select {
   .chip-table,
   .pathway-controls,
   .pathway-keyfigures,
+  .quick-stat-grid,
   .ring-grid {
     grid-template-columns: 1fr;
   }

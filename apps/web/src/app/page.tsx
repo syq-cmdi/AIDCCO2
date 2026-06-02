@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Activity,
   AlertTriangle,
   BatteryCharging,
   Boxes,
@@ -28,6 +27,8 @@ import { loadChipSimulation, loadDigitalTwin, loadMatching, loadOmniversePolicy,
 import { cfeMatched, fallbackChipSimulation, fallbackDigitalTwin, fallbackMatching, fallbackOmniversePolicy, fallbackQuota, fallbackRealtime, hourlyCarbon, hourlyLoad, optimizerItems } from "../lib/sample";
 import { aidcPathwayScenarios, assessAidcPathway, type PathwayAssessment, type PathwayHorizon, type PathwayPoint } from "../lib/pathways";
 
+type WorkbenchView = "pathway" | "twin" | "systems" | "quota" | "optimizer" | "fidelity";
+
 type MetricCardProps = {
   label: string;
   value: string;
@@ -38,18 +39,57 @@ type MetricCardProps = {
 };
 
 const navItems = [
-  { icon: Boxes, label: "孪生" },
-  { icon: Sparkles, label: "真实感" },
-  { icon: Globe2, label: "围护" },
-  { icon: Droplets, label: "机电" },
-  { icon: Cpu, label: "芯片" },
-  { icon: Activity, label: "实时" },
-  { icon: LineChart, label: "路径评测" },
-  { icon: HardDrive, label: "Server核查" },
-  { icon: ShieldCheck, label: "配额" },
-  { icon: Leaf, label: "24/7 CFE" },
-  { icon: Cpu, label: "AI 优化" },
-  { icon: FileCheck2, label: "证据" }
+  { id: "pathway", icon: LineChart, label: "路径评测", helper: "AIDC 碳中和情景与科学配额" },
+  { id: "twin", icon: Boxes, label: "机柜孪生", helper: "园区到 server/chip 的核查链" },
+  { id: "systems", icon: Droplets, label: "机电与实时", helper: "冷源、电测、围护与负载" },
+  { id: "quota", icon: ShieldCheck, label: "配额 / CFE", helper: "履约风险与 24/7 零碳匹配" },
+  { id: "optimizer", icon: Cpu, label: "AI 降碳", helper: "优化建议、基线和安全约束" },
+  { id: "fidelity", icon: Sparkles, label: "真实感管线", helper: "Rhino / BIM / OpenUSD / RTX" }
+] satisfies Array<{
+  id: WorkbenchView;
+  icon: React.ComponentType<{ size?: number }>;
+  label: string;
+  helper: string;
+}>;
+
+const viewIntro: Record<WorkbenchView, { eyebrow: string; title: string; body: string }> = {
+  pathway: {
+    eyebrow: "Tool 01 / Pathway evaluator",
+    title: "AIDC 碳中和路径评测工具",
+    body: "以站点+电网为核算边界，比较 physical emissions、科学配额、market-based 披露线与硬件 LCA，避免 offset 或 avoided emissions 抵扣物理排放。"
+  },
+  twin: {
+    eyebrow: "Tool 02 / Rack-to-server audit",
+    title: "机柜级数字孪生碳核查",
+    body: "把园区、建筑、机房、机柜、server 与 chip 统一到同一条计量分摊链，支持点击机柜后查看 server 层电量、冷却分摊和 LCA。"
+  },
+  systems: {
+    eyebrow: "Tool 03 / Realtime systems",
+    title: "动环、冷源、电测与围护实时监控",
+    body: "将 BMS/DCIM/EPMS 数据映射为 PUE、CUE、WUE、负载、碳强度和一次侧制冷状态，保留 method_version 与数据质量标记。"
+  },
+  quota: {
+    eyebrow: "Tool 04 / Quota and 24/7 CFE",
+    title: "配额履约与小时级零碳电力匹配",
+    body: "把 ETS/内部预算/客户项目配额与小时级 CFE Score 放在同一工作区，同时保持 location-based 与 market-based 分开披露。"
+  },
+  optimizer: {
+    eyebrow: "Tool 05 / AI decarbonization",
+    title: "AI 降碳优化建议队列",
+    body: "围绕冷却数字孪生、碳感知调度、GPU 利用率与模型效率给出可执行建议，并显示预期收益与约束条件。"
+  },
+  fidelity: {
+    eyebrow: "Tool 06 / Photoreal twin pipeline",
+    title: "工程级高真实感数字孪生管线",
+    body: "整合 Rhino、IFC/BIM、点云、Speckle、OpenUSD 与 Omniverse 风格渲染，服务于工程审计和大屏展示两类场景。"
+  }
+};
+
+const quickStats = [
+  { label: "路径评测", value: "6", unit: "scenarios" },
+  { label: "核查层级", value: "6", unit: "campus-chip" },
+  { label: "披露口径", value: "2", unit: "LB / MB" },
+  { label: "刷新目标", value: "<5", unit: "min" }
 ];
 
 function formatNumber(value: number, digits = 1) {
@@ -719,6 +759,7 @@ export default function DashboardPage() {
   const [selectedRackId, setSelectedRackId] = useState<string>(fallbackDigitalTwin.campus.buildings[0].rooms[0].racks[0].id);
   const [selectedPathwayId, setSelectedPathwayId] = useState<string>(aidcPathwayScenarios[0].id);
   const [pathwayHorizon, setPathwayHorizon] = useState<PathwayHorizon>(2050);
+  const [activeView, setActiveView] = useState<WorkbenchView>("pathway");
 
   useEffect(() => {
     let isMounted = true;
@@ -799,6 +840,7 @@ export default function DashboardPage() {
     () => assessAidcPathway(selectedPathwayId, pathwayHorizon, annualBaselineTco2e),
     [annualBaselineTco2e, pathwayHorizon, selectedPathwayId]
   );
+  const activeIntro = viewIntro[activeView];
 
   useEffect(() => {
     if (!selectedRack) {
@@ -836,6 +878,188 @@ export default function DashboardPage() {
     };
   }, [digitalTwin.site_id, selectedRack]);
 
+  const powerPanel = (
+    <section className="panel power-panel">
+      <div className="panel-heading">
+        <div>
+          <span className="eyebrow">Realtime Monitor</span>
+          <h2>负载、碳强度与排放</h2>
+        </div>
+        <LineChart size={22} />
+      </div>
+      <div className="chart-stack">
+        <Sparkline points={hourlyLoad} color="#1f7a5c" />
+        <Sparkline points={hourlyCarbon} color="#c44e3a" />
+      </div>
+      <div className="legend-row">
+        <span><i className="legend green" />IT load kWh</span>
+        <span><i className="legend red" />Grid CI gCO2e/kWh</span>
+        <span><i className="legend blue" />interval {metrics.interval_minutes} min</span>
+      </div>
+    </section>
+  );
+
+  const inventoryPanel = (
+    <section className="panel inventory-panel">
+      <div className="panel-heading">
+        <div>
+          <span className="eyebrow">Lifecycle Inventory</span>
+          <h2>Scope 1 / 2 / 3 分层</h2>
+        </div>
+        <Database size={22} />
+      </div>
+      <div className="scope-list">
+        <div>
+          <span>Scope 1</span>
+          <strong>备用燃料 · 制冷剂</strong>
+          <i style={{ width: "12%" }} />
+        </div>
+        <div>
+          <span>Scope 2</span>
+          <strong>location 与 market 双口径</strong>
+          <i style={{ width: "61%" }} />
+        </div>
+        <div>
+          <span>Scope 3</span>
+          <strong>GPU / 服务器 / 建筑 LCA</strong>
+          <i style={{ width: "38%" }} />
+        </div>
+      </div>
+    </section>
+  );
+
+  const optimizerPanel = (
+    <section className="panel optimizer-panel" id="AI 优化">
+      <div className="panel-heading">
+        <div>
+          <span className="eyebrow">AI Decarbonization</span>
+          <h2>优化建议队列</h2>
+        </div>
+        <Cpu size={22} />
+      </div>
+      <div className="optimizer-list">
+        {optimizerItems.map((item) => (
+          <article key={item.title}>
+            <div>
+              <strong>{item.title}</strong>
+              <span>{item.impact}</span>
+            </div>
+            <p>{item.detail}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+
+  const evidencePanel = (
+    <section className="panel evidence-panel" id="证据">
+      <div className="panel-heading">
+        <div>
+          <span className="eyebrow">Audit Evidence</span>
+          <h2>证据包状态</h2>
+        </div>
+        <FileCheck2 size={22} />
+      </div>
+      <div className="evidence-list">
+        <span><ShieldCheck size={17} />电表原始读数已哈希</span>
+        <span><FileCheck2 size={17} />EAC / GC 序列号无重复</span>
+        <span><AlertTriangle size={17} />3 条冷机数据为估算补点</span>
+      </div>
+    </section>
+  );
+
+  const renderWorkbench = () => {
+    if (activeView === "pathway") {
+      return (
+        <section className="workspace-grid pathway-workspace">
+          <PathwayPanel
+            annualBaselineTco2e={annualBaselineTco2e}
+            assessment={pathwayAssessment}
+            horizon={pathwayHorizon}
+            onHorizonChange={setPathwayHorizon}
+            onScenarioChange={setSelectedPathwayId}
+            scenarioId={selectedPathwayId}
+          />
+          <QuotaPanel quota={quota} />
+          <MatchingPanel matching={matching} />
+        </section>
+      );
+    }
+
+    if (activeView === "twin") {
+      return (
+        <section className="workspace-grid twin-workspace">
+          {selectedRack ? (
+            <section className="panel twin-panel" id="孪生">
+              <div className="panel-heading">
+                <div>
+                  <span className="eyebrow">Cabinet Digital Twin</span>
+                  <h2>园区统一到 server 层的三维碳核查</h2>
+                </div>
+                <Boxes size={22} />
+              </div>
+              <div className="twin-layout">
+                <TwinScene twin={digitalTwin} selectedRackId={selectedRack.id} onSelectRack={(rack) => setSelectedRackId(rack.id)} />
+                <RackInspector rack={selectedRack} />
+              </div>
+              <div className="twin-summary">
+                <span><Network size={16} />{digitalTwin.rack_count} racks</span>
+                <span><HardDrive size={16} />{digitalTwin.server_count} servers</span>
+                <span><Cpu size={16} />{digitalTwin.chip_count} chips</span>
+                <span><Droplets size={16} />{digitalTwin.primary_cooling_system.length} cooling nodes</span>
+                <span><Globe2 size={16} />{formatNumber(digitalTwin.aggregate_location_kg_per_hour, 2)} kgCO2e/h LB</span>
+                <span><FileCheck2 size={16} />refresh {digitalTwin.refresh_seconds}s</span>
+              </div>
+            </section>
+          ) : null}
+          {selectedRack ? <ServerAuditPanel twin={digitalTwin} selectedRack={selectedRack} /> : null}
+          <ChipSimulationPanel simulation={chipSimulation} />
+        </section>
+      );
+    }
+
+    if (activeView === "systems") {
+      return (
+        <section className="workspace-grid systems-workspace">
+          {powerPanel}
+          <EnvelopePanel twin={digitalTwin} />
+          <MepSystemsPanel twin={digitalTwin} />
+          {inventoryPanel}
+        </section>
+      );
+    }
+
+    if (activeView === "quota") {
+      return (
+        <section className="workspace-grid quota-workspace">
+          <QuotaPanel quota={quota} />
+          <MatchingPanel matching={matching} />
+          {inventoryPanel}
+          {evidencePanel}
+        </section>
+      );
+    }
+
+    if (activeView === "optimizer") {
+      return (
+        <section className="workspace-grid optimizer-workspace">
+          {optimizerPanel}
+          {powerPanel}
+          <ChipSimulationPanel simulation={chipSimulation} />
+          {evidencePanel}
+        </section>
+      );
+    }
+
+    return (
+      <section className="workspace-grid fidelity-workspace">
+        <FidelityPolicyPanel policy={omniversePolicy} />
+        <ToolchainPanel twin={digitalTwin} />
+        {evidencePanel}
+      </section>
+    );
+  };
+
   return (
     <main className="dashboard">
       <aside className="sidebar">
@@ -848,10 +1072,10 @@ export default function DashboardPage() {
         </div>
         <nav>
           {navItems.map((item) => (
-            <a href={`#${item.label}`} key={item.label}>
+            <button className={activeView === item.id ? "active" : ""} key={item.id} onClick={() => setActiveView(item.id)} title={item.helper} type="button">
               <item.icon size={18} />
               <span>{item.label}</span>
-            </a>
+            </button>
           ))}
         </nav>
       </aside>
@@ -877,129 +1101,24 @@ export default function DashboardPage() {
           ))}
         </section>
 
-        <section className="workspace-grid">
-          <PathwayPanel
-            annualBaselineTco2e={annualBaselineTco2e}
-            assessment={pathwayAssessment}
-            horizon={pathwayHorizon}
-            onHorizonChange={setPathwayHorizon}
-            onScenarioChange={setSelectedPathwayId}
-            scenarioId={selectedPathwayId}
-          />
-          {selectedRack ? (
-            <section className="panel twin-panel" id="孪生">
-              <div className="panel-heading">
-                <div>
-                  <span className="eyebrow">Cabinet Digital Twin</span>
-                  <h2>园区统一到 server 层的三维碳核查</h2>
-                </div>
-                <Boxes size={22} />
-              </div>
-              <div className="twin-layout">
-                <TwinScene twin={digitalTwin} selectedRackId={selectedRack.id} onSelectRack={(rack) => setSelectedRackId(rack.id)} />
-                <RackInspector rack={selectedRack} />
-              </div>
-              <div className="twin-summary">
-                <span><Network size={16} />{digitalTwin.rack_count} racks</span>
-                <span><HardDrive size={16} />{digitalTwin.server_count} servers</span>
-                <span><Cpu size={16} />{digitalTwin.chip_count} chips</span>
-                <span><Droplets size={16} />{digitalTwin.primary_cooling_system.length} cooling nodes</span>
-                <span><Globe2 size={16} />{formatNumber(digitalTwin.aggregate_location_kg_per_hour, 2)} kgCO2e/h LB</span>
-                <span><FileCheck2 size={16} />refresh {digitalTwin.refresh_seconds}s</span>
-              </div>
-            </section>
-          ) : null}
-          <FidelityPolicyPanel policy={omniversePolicy} />
-          <EnvelopePanel twin={digitalTwin} />
-          <MepSystemsPanel twin={digitalTwin} />
-          <ChipSimulationPanel simulation={chipSimulation} />
-
-          <section className="panel power-panel">
-            <div className="panel-heading">
-              <div>
-                <span className="eyebrow">Realtime Monitor</span>
-                <h2>负载、碳强度与排放</h2>
-              </div>
-              <LineChart size={22} />
+        <section className="workbench-shell">
+          <section className="tool-hero">
+            <div>
+              <span className="eyebrow">{activeIntro.eyebrow}</span>
+              <h2>{activeIntro.title}</h2>
+              <p>{activeIntro.body}</p>
             </div>
-            <div className="chart-stack">
-              <Sparkline points={hourlyLoad} color="#1f7a5c" />
-              <Sparkline points={hourlyCarbon} color="#c44e3a" />
-            </div>
-            <div className="legend-row">
-              <span><i className="legend green" />IT load kWh</span>
-              <span><i className="legend red" />Grid CI gCO2e/kWh</span>
-              <span><i className="legend blue" />interval {metrics.interval_minutes} min</span>
-            </div>
-          </section>
-
-          <QuotaPanel quota={quota} />
-          <MatchingPanel matching={matching} />
-          {selectedRack ? <ServerAuditPanel twin={digitalTwin} selectedRack={selectedRack} /> : null}
-          <ToolchainPanel twin={digitalTwin} />
-
-          <section className="panel inventory-panel">
-            <div className="panel-heading">
-              <div>
-                <span className="eyebrow">Lifecycle Inventory</span>
-                <h2>Scope 1 / 2 / 3 分层</h2>
-              </div>
-              <Database size={22} />
-            </div>
-            <div className="scope-list">
-              <div>
-                <span>Scope 1</span>
-                <strong>备用燃料 · 制冷剂</strong>
-                <i style={{ width: "12%" }} />
-              </div>
-              <div>
-                <span>Scope 2</span>
-                <strong>location 与 market 双口径</strong>
-                <i style={{ width: "61%" }} />
-              </div>
-              <div>
-                <span>Scope 3</span>
-                <strong>GPU / 服务器 / 建筑 LCA</strong>
-                <i style={{ width: "38%" }} />
-              </div>
-            </div>
-          </section>
-
-          <section className="panel optimizer-panel" id="AI 优化">
-            <div className="panel-heading">
-              <div>
-                <span className="eyebrow">AI Decarbonization</span>
-                <h2>优化建议队列</h2>
-              </div>
-              <Cpu size={22} />
-            </div>
-            <div className="optimizer-list">
-              {optimizerItems.map((item) => (
-                <article key={item.title}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.impact}</span>
-                  </div>
-                  <p>{item.detail}</p>
+            <div className="quick-stat-grid">
+              {quickStats.map((stat) => (
+                <article key={stat.label}>
+                  <span>{stat.label}</span>
+                  <strong>{stat.value}</strong>
+                  <small>{stat.unit}</small>
                 </article>
               ))}
             </div>
           </section>
-
-          <section className="panel evidence-panel" id="证据">
-            <div className="panel-heading">
-              <div>
-                <span className="eyebrow">Audit Evidence</span>
-                <h2>证据包状态</h2>
-              </div>
-              <FileCheck2 size={22} />
-            </div>
-            <div className="evidence-list">
-              <span><ShieldCheck size={17} />电表原始读数已哈希</span>
-              <span><FileCheck2 size={17} />EAC / GC 序列号无重复</span>
-              <span><AlertTriangle size={17} />3 条冷机数据为估算补点</span>
-            </div>
-          </section>
+          {renderWorkbench()}
         </section>
       </section>
     </main>
