@@ -13,6 +13,7 @@ import {
   Gauge,
   Globe2,
   HardDrive,
+  Layers,
   Leaf,
   LineChart,
   Network,
@@ -23,11 +24,11 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import TwinScene from "../components/TwinScene";
-import { loadChipSimulation, loadDigitalTwin, loadMatching, loadOmniversePolicy, loadQuotaStatus, loadRealtimeMetrics, type ChipSimulationResponse, type DigitalTwinResponse, type MatchingResult, type OmniverseFidelityPolicy, type QuotaStatus, type RackTwin, type RealtimeMetrics } from "../lib/api";
-import { cfeMatched, fallbackChipSimulation, fallbackDigitalTwin, fallbackMatching, fallbackOmniversePolicy, fallbackQuota, fallbackRealtime, hourlyCarbon, hourlyLoad, optimizerItems } from "../lib/sample";
+import { loadChipSimulation, loadDigitalTwin, loadEfficiencySummary, loadMatching, loadOmniversePolicy, loadQuotaStatus, loadRealtimeMetrics, type ChipSimulationResponse, type DigitalTwinResponse, type EfficiencySummaryResponse, type MatchingResult, type OmniverseFidelityPolicy, type QuotaStatus, type RackTwin, type RealtimeMetrics } from "../lib/api";
+import { cfeMatched, fallbackChipSimulation, fallbackDigitalTwin, fallbackEfficiencySummary, fallbackMatching, fallbackOmniversePolicy, fallbackQuota, fallbackRealtime, hourlyCarbon, hourlyLoad, optimizerItems } from "../lib/sample";
 import { aidcPathwayScenarios, assessAidcPathway, type PathwayAssessment, type PathwayHorizon, type PathwayPoint } from "../lib/pathways";
 
-type WorkbenchView = "pathway" | "twin" | "systems" | "quota" | "optimizer" | "fidelity";
+type WorkbenchView = "pathway" | "twin" | "systems" | "quota" | "optimizer" | "efficiency" | "fidelity";
 
 type MetricCardProps = {
   label: string;
@@ -44,6 +45,7 @@ const navItems = [
   { id: "systems", icon: Droplets, label: "机电与实时", helper: "冷源、电测、围护与负载" },
   { id: "quota", icon: ShieldCheck, label: "配额 / CFE", helper: "履约风险与 24/7 零碳匹配" },
   { id: "optimizer", icon: Cpu, label: "AI 降碳", helper: "优化建议、基线和安全约束" },
+  { id: "efficiency", icon: Layers, label: "能效工程", helper: "虚拟化/热管理/储能/绿能/光网" },
   { id: "fidelity", icon: Sparkles, label: "真实感管线", helper: "Rhino / BIM / OpenUSD / RTX" }
 ] satisfies Array<{
   id: WorkbenchView;
@@ -78,8 +80,13 @@ const viewIntro: Record<WorkbenchView, { eyebrow: string; title: string; body: s
     title: "AI 降碳优化建议队列",
     body: "围绕冷却数字孪生、碳感知调度、GPU 利用率与模型效率给出可执行建议，并显示预期收益与约束条件。"
   },
+  efficiency: {
+    eyebrow: "Tool 06 / Cross-layer efficiency",
+    title: "跨层能效工程（虚拟化·热管理·储能·绿能·光网）",
+    body: "把工作负载共置、主动热管理、分布式磷酸铁锂储能削峰、绿能感知广域路由与高速光网整合为同一套软件定义能效引擎；能效估算仅作运营指导，不抵扣已审计的物理排放。"
+  },
   fidelity: {
-    eyebrow: "Tool 06 / Photoreal twin pipeline",
+    eyebrow: "Tool 07 / Photoreal twin pipeline",
     title: "工程级高真实感数字孪生管线",
     body: "整合 Rhino、IFC/BIM、点云、Speckle、OpenUSD 与 Omniverse 风格渲染，服务于工程审计和大屏展示两类场景。"
   }
@@ -767,6 +774,53 @@ function RackInspector({ rack }: { rack: RackTwin }) {
   );
 }
 
+function EfficiencyPanel({ summary }: { summary: EfficiencySummaryResponse }) {
+  const formatLeverValue = (metric: string, value: number) =>
+    metric.endsWith("_x") ? `${formatNumber(value, 1)}×` : `${formatNumber(value * 100, 0)}%`;
+
+  return (
+    <section className="panel efficiency-panel">
+      <div className="panel-heading">
+        <div>
+          <span className="eyebrow">Cross-layer Efficiency</span>
+          <h2>跨层能效工程引擎</h2>
+        </div>
+        <Layers size={22} />
+      </div>
+      <div className="efficiency-grid">
+        {summary.levers.map((lever) => (
+          <article className="efficiency-card" key={lever.lever}>
+            <h3>{lever.title}</h3>
+            <div className="efficiency-card__value">
+              <strong>{formatLeverValue(lever.primary_metric, lever.primary_value)}</strong>
+              <small>参考 {formatLeverValue(lever.primary_metric, lever.reference_value)}</small>
+            </div>
+            <p className="efficiency-card__headline">{lever.headline}</p>
+            <p className="efficiency-card__insight">{lever.insight}</p>
+            <code>{lever.endpoint}</code>
+          </article>
+        ))}
+      </div>
+      <div className="efficiency-insights">
+        <h3>关联见解</h3>
+        <ul>
+          {summary.cross_layer_insights.map((insight) => (
+            <li key={insight}>{insight}</li>
+          ))}
+        </ul>
+      </div>
+      <ul className="efficiency-constraints">
+        {summary.safety_constraints.map((constraint) => (
+          <li key={constraint}>
+            <ShieldCheck size={14} />
+            {constraint}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<RealtimeMetrics>(fallbackRealtime);
   const [quota, setQuota] = useState<QuotaStatus>(fallbackQuota);
@@ -774,6 +828,7 @@ export default function DashboardPage() {
   const [digitalTwin, setDigitalTwin] = useState<DigitalTwinResponse>(fallbackDigitalTwin);
   const [omniversePolicy, setOmniversePolicy] = useState<OmniverseFidelityPolicy>(fallbackOmniversePolicy);
   const [chipSimulation, setChipSimulation] = useState<ChipSimulationResponse>(fallbackChipSimulation);
+  const [efficiency, setEfficiency] = useState<EfficiencySummaryResponse>(fallbackEfficiencySummary);
   const [selectedRackId, setSelectedRackId] = useState<string>(fallbackDigitalTwin.campus.buildings[0].rooms[0].racks[0].id);
   const [selectedPathwayId, setSelectedPathwayId] = useState<string>(aidcPathwayScenarios[0].id);
   const [pathwayHorizon, setPathwayHorizon] = useState<PathwayHorizon>(2050);
@@ -781,7 +836,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let isMounted = true;
-    Promise.all([loadRealtimeMetrics(), loadQuotaStatus(), loadMatching(), loadDigitalTwin(), loadOmniversePolicy()]).then(([metricsResult, quotaResult, matchingResult, twinResult, policyResult]) => {
+    Promise.all([loadRealtimeMetrics(), loadQuotaStatus(), loadMatching(), loadDigitalTwin(), loadOmniversePolicy(), loadEfficiencySummary()]).then(([metricsResult, quotaResult, matchingResult, twinResult, policyResult, efficiencyResult]) => {
       if (!isMounted) {
         return;
       }
@@ -796,6 +851,7 @@ export default function DashboardPage() {
         }
       }
       if (policyResult) setOmniversePolicy(policyResult);
+      if (efficiencyResult) setEfficiency(efficiencyResult);
     });
     return () => {
       isMounted = false;
@@ -1065,6 +1121,14 @@ export default function DashboardPage() {
           {powerPanel}
           <ChipSimulationPanel simulation={chipSimulation} />
           {evidencePanel}
+        </section>
+      );
+    }
+
+    if (activeView === "efficiency") {
+      return (
+        <section className="workspace-grid efficiency-workspace">
+          <EfficiencyPanel summary={efficiency} />
         </section>
       );
     }

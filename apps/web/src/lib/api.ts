@@ -298,6 +298,209 @@ export type OmniverseFidelityPolicy = {
   accounting_integrations: AccountingToolIntegration[];
 };
 
+// ---- Cross-layer energy-efficiency upgrade ----
+
+export type ColocationServerPlan = {
+  server_id: string;
+  foreground_class: "sla_sensitive" | "batch";
+  background_class: "sla_sensitive" | "batch" | null;
+  baseline_utilization: number;
+  colocated_utilization: number;
+  absorbed_batch_kw: number;
+  qos_ratio: number;
+  sla_respected: boolean;
+  scheduler_mode: string;
+  baseline_power_kw: number;
+  colocated_power_kw: number;
+  state: "host" | "parked";
+};
+
+export type WorkloadSchedulingResponse = {
+  site_id: string;
+  generated_at: string;
+  scheduler: string;
+  method_version: string;
+  reference_efficiency_gain_pct: number;
+  servers_total: number;
+  sla_servers: number;
+  batch_servers: number;
+  servers_parked: number;
+  fleet_qos_ratio: number;
+  min_qos_ratio: number;
+  sla_target_qos: number;
+  sla_violations: number;
+  baseline_power_kw: number;
+  optimized_power_kw: number;
+  energy_saving_pct: number;
+  peak_node_efficiency_gain_pct: number;
+  server_plans: ColocationServerPlan[];
+  safety_constraints: string[];
+  notes: string[];
+};
+
+export type HotspotPrediction = {
+  chip_id: string;
+  server_id: string;
+  chip_type: string;
+  current_hotspot_c: number;
+  predicted_hotspot_c: number;
+  headroom_c: number;
+  risk: "nominal" | "watch" | "throttle_risk";
+  recommended_action: string;
+};
+
+export type FanZoneSetpoint = {
+  zone_id: string;
+  equipment_type: string;
+  baseline_speed_pct: number;
+  optimized_speed_pct: number;
+  baseline_power_kw: number;
+  optimized_power_kw: number;
+  bound_by: string;
+};
+
+export type ThermalManagementResponse = {
+  site_id: string;
+  generated_at: string;
+  method_version: string;
+  horizon_minutes: number;
+  sla_temp_c: number;
+  chips_evaluated: number;
+  hotspots_flagged: number;
+  current_max_hotspot_c: number;
+  predicted_max_hotspot_c: number;
+  baseline_cooling_kw: number;
+  optimized_cooling_kw: number;
+  cooling_saving_pct: number;
+  workload_migrations: string[];
+  hotspot_predictions: HotspotPrediction[];
+  fan_zones: FanZoneSetpoint[];
+  safety_constraints: string[];
+};
+
+export type PeakWindow = {
+  start_index: number;
+  duration_hours: number;
+  peak_kw: number;
+  energy_above_budget_kwh: number;
+  covered_by_battery: boolean;
+};
+
+export type DistributedBatteryResponse = {
+  site_id: string;
+  generated_at: string;
+  method_version: string;
+  chemistry: string;
+  reference_extra_capacity_pct: number;
+  power_budget_kw: number;
+  observed_peak_kw: number;
+  shaved_peak_kw: number;
+  sustainable_shave_kw: number;
+  battery_energy_kwh: number;
+  max_discharge_kw: number;
+  longest_peak_hours: number;
+  per_server_kw: number;
+  extra_servers_distributed: number;
+  extra_servers_centralized: number;
+  extra_capacity_pct: number;
+  centralized_ridethrough_minutes: number;
+  peak_windows: PeakWindow[];
+  notes: string[];
+};
+
+export type RegionRoutingPlan = {
+  site_id: string;
+  region: string;
+  load_before_mw: number;
+  load_after_mw: number;
+  migrated_in_mw: number;
+  migrated_out_mw: number;
+  green_coverage_before: number;
+  green_coverage_after: number;
+  grid_ci_kg_per_kwh: number;
+};
+
+export type GlobalEnergyRoutingResponse = {
+  generated_at: string;
+  method_version: string;
+  reference_interruption_reduction_x: number;
+  total_load_mw: number;
+  total_green_mw: number;
+  green_coverage_before: number;
+  green_coverage_after: number;
+  migrated_load_mw: number;
+  job_interruptions_before: number;
+  job_interruptions_after: number;
+  interruption_reduction_x: number;
+  avoided_brown_mwh_per_hour: number;
+  region_plans: RegionRoutingPlan[];
+  safety_constraints: string[];
+};
+
+export type OpticalLinkLoad = {
+  link_id: string;
+  scope: string;
+  capacity_gbps: number;
+  offered_gbps: number;
+  utilization: number;
+  congested: boolean;
+};
+
+export type MigrationPlan = {
+  job_id: string;
+  link_id: string;
+  data_gb: number;
+  throughput_gbps: number;
+  transfer_seconds: number;
+  meets_deadline: boolean;
+  legacy_transfer_seconds: number;
+  speedup_x: number;
+};
+
+export type OpticalFabricResponse = {
+  site_id: string;
+  generated_at: string;
+  method_version: string;
+  legacy_link_gbps: number;
+  aggregate_capacity_gbps: number;
+  aggregate_offered_gbps: number;
+  fabric_utilization: number;
+  congested_links: number;
+  jobs_meeting_deadline: number;
+  jobs_total: number;
+  median_speedup_x: number;
+  energy_per_gb_optical_j: number;
+  energy_per_gb_electrical_j: number;
+  link_loads: OpticalLinkLoad[];
+  migration_plans: MigrationPlan[];
+  notes: string[];
+};
+
+export type EfficiencyLeverSummary = {
+  lever:
+    | "workload_scheduling"
+    | "thermal_management"
+    | "distributed_battery"
+    | "global_energy_routing"
+    | "optical_fabric";
+  title: string;
+  headline: string;
+  primary_metric: string;
+  primary_value: number;
+  reference_value: number;
+  endpoint: string;
+  insight: string;
+};
+
+export type EfficiencySummaryResponse = {
+  site_id: string;
+  generated_at: string;
+  method_version: string;
+  levers: EfficiencyLeverSummary[];
+  cross_layer_insights: string[];
+  safety_constraints: string[];
+};
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function getJson<T>(path: string): Promise<T | null> {
@@ -355,4 +558,28 @@ export async function loadChipSimulation(siteId = "aidc-sg-01", rackId?: string,
 
 export async function loadOmniversePolicy(siteId = "aidc-sg-01") {
   return getJson<OmniverseFidelityPolicy>(`/photorealism/omniverse-policy/${siteId}`);
+}
+
+export async function loadWorkloadScheduling(siteId = "aidc-sg-01") {
+  return getJson<WorkloadSchedulingResponse>(`/efficiency/workload-scheduling?site_id=${siteId}`);
+}
+
+export async function loadThermalManagement(siteId = "aidc-sg-01") {
+  return getJson<ThermalManagementResponse>(`/efficiency/thermal-management?site_id=${siteId}`);
+}
+
+export async function loadDistributedBattery(siteId = "aidc-sg-01") {
+  return getJson<DistributedBatteryResponse>(`/efficiency/distributed-battery?site_id=${siteId}`);
+}
+
+export async function loadGlobalEnergyRouting() {
+  return getJson<GlobalEnergyRoutingResponse>(`/efficiency/global-energy-routing`);
+}
+
+export async function loadOpticalFabric(siteId = "aidc-sg-01") {
+  return getJson<OpticalFabricResponse>(`/efficiency/optical-fabric?site_id=${siteId}`);
+}
+
+export async function loadEfficiencySummary(siteId = "aidc-sg-01") {
+  return getJson<EfficiencySummaryResponse>(`/efficiency/summary?site_id=${siteId}`);
 }

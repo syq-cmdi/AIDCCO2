@@ -11,13 +11,14 @@ The current implementation targets an AIDC / AI Data Center campus. It combines:
 - cabinet, server, and chip-level digital-twin carbon allocation
 - 24/7 carbon-free energy matching
 - industrial BMS / EPMS / cooling SCADA-style dynamic environment monitoring
+- cross-layer energy-efficiency engine (workload co-location, active thermal management, distributed battery peak shaving, green-aware global routing, optical migration fabric)
 - photoreal Three.js and OpenUSD / Omniverse integration contracts
 
 ## Current Screens
 
 The app exposes three main operator surfaces:
 
-- `/`: operational carbon workbench for KPI cards, cabinet/server/chip twin inspection, lifecycle inventory, quota risk, CFE matching, AI optimization, and evidence status.
+- `/`: operational carbon workbench for KPI cards, cabinet/server/chip twin inspection, lifecycle inventory, quota risk, CFE matching, AI optimization, cross-layer energy efficiency, and evidence status.
 - `/bigscreen`: campus carbon command center for a 16:9 wall display, with 3D campus overview, real-time carbon/electricity/cooling/water indicators, quota/CFE rings, alerts, and MEP summaries.
 - `/bms`: Siemens/Honeywell-style industrial dynamic environment monitoring interface, including machine-room floor plan, rack/sensor overlays, cooling P&ID, system parameter settings, alarm radar, CCTV strip, and BMS/EPMS protocol status.
 
@@ -38,7 +39,7 @@ Generated screenshots are stored under `artifacts/`:
 
 ### 中文页面入口
 
-- `/`：运营工作台，展示 PUE、CUE、WUE、REF、Scope 1/2/3、配额风险、24/7 CFE 匹配、AI 优化建议和证据包状态。
+- `/`：运营工作台，展示 PUE、CUE、WUE、REF、Scope 1/2/3、配额风险、24/7 CFE 匹配、AI 优化建议、跨层能效工程（虚拟化调度 / 热管理 / 分布式储能 / 全局绿能路由 / 光通信）和证据包状态。
 - `/bigscreen`：园区级数字大屏，用于指挥中心或大屏墙，包含高真实感 Three.js 园区数字孪生、实时碳流、电力、冷却、水、配额和 CFE 监控。
 - `/bms`：工业动环监控界面，风格参考西门子 / Honeywell 类 BMS、EPMS、冷源群控系统，包含机房平面图、冷冻水 / 冷却水 P&ID、参数设定、告警、CCTV 和协议状态。
 
@@ -151,8 +152,9 @@ flowchart LR
 │   ├── app/main.py                   # FastAPI endpoints
 │   ├── app/models.py                 # Pydantic domain models
 │   ├── app/calculations.py           # accounting and matching formulas
-│   ├── app/sample_data.py            # demo site, telemetry, twin, MEP data
-│   └── tests                         # API and formula tests
+│   ├── app/efficiency.py             # cross-layer energy-efficiency engine
+│   ├── app/sample_data.py            # demo site, telemetry, twin, MEP, efficiency data
+│   └── tests                         # API, formula, and efficiency tests
 ├── db/schema.sql                     # TimescaleDB/PostGIS persistence schema
 ├── infra/docker-compose.yml          # TimescaleDB, Redpanda, MinIO
 ├── docs
@@ -272,6 +274,49 @@ The `/bms` route implements a SCADA-style view inspired by industrial BMS / EPMS
 - BMS protocol status for BACnet/IP, OPC UA, Modbus TCP, DCIM, and EPMS
 
 This view is intentionally operational and dense. It is designed for wall displays and control-room use rather than a marketing dashboard.
+
+### Cross-Layer Energy Efficiency
+
+Data-center energy efficiency is treated as a cross-layer systems-engineering
+problem rather than a single hardware upgrade. The platform exposes a separate
+efficiency engine (`services/api/app/efficiency.py`) with five coordinated
+levers. Efficiency estimates are operational guidance only and **never** reduce
+the audited physical Scope 1/2/3 inventory, SCI, or server-layer carbon
+metrics.
+
+1. **Virtualization and QoS-aware workload scheduling** — co-locates
+   SLA-sensitive (latency-critical / online inference) services with deferrable
+   batch jobs on the same nodes using an improved Xen-style proportional-share +
+   boost scheduler. Real-time QoS-ratio monitoring keeps latency-critical VMs at
+   target so the fleet can run hot instead of being overprovisioned. Reports
+   per-node consolidation gain (on the order of the cited ~70% work-per-watt
+   reference), net fleet energy saving, parked nodes, and per-node SLA
+   compliance.
+2. **Active thermal management and cooling co-scheduling** — predicts chip
+   hotspots over a control horizon and co-schedules workload placement with fan
+   / cooling setpoints. Proactive control trims reactive fan overspeed; fan
+   power follows the affinity (cube) law, materially reducing cooling energy.
+3. **Distributed server-level battery peak shaving** — distributed LiFePO4
+   (LFP) server UPS shave multi-hour power peaks that a central UPS can only
+   ride through for minutes. The freed grid-power headroom is reinvested as
+   additional server deployment inside the same power budget (~24% reference),
+   turning the facility into an energy-storage buffer.
+4. **Green-aware global energy routing** — uses renewable (solar / wind)
+   forecasts and green-aware wide-area routing to migrate deferrable workloads
+   across geo-distributed sites, raising green coverage and cutting job
+   interruptions (toward the cited ~5x reference) while keeping a brown-power
+   fallback and respecting data-residency and latency limits.
+5. **High-speed optical migration fabric** — models 40G/100G+/DWDM intra-DC and
+   inter-region links to size migration time, relieve congestion, and meet
+   SLA-sensitive transfer deadlines. Optical transport energy-per-byte is far
+   below electrical switching (illustrative values).
+
+A combined `/efficiency/summary` endpoint rolls the five levers into a single
+cross-layer view with the associated insights: real-time QoS feedback replaces
+overprovisioning, distributed storage buffers both peaks and renewable
+supply/demand mismatch, and as hardware trends toward fixed power draw, savings
+increasingly come from software that is aware of temperature, power contracts,
+and network bandwidth and can relocate compute accordingly.
 
 ### Photoreal and Engineering Digital Twin
 
@@ -414,6 +459,24 @@ Content-Type: application/json
 ```
 
 Returns AI decarbonization suggestions with baseline, estimated reduction, confidence, safety constraints, and rationale.
+
+### Cross-Layer Efficiency
+
+```http
+GET /efficiency/workload-scheduling?site_id=aidc-sg-01&sla_util_cap=0.85&allow_colocation=true
+GET /efficiency/thermal-management?site_id=aidc-sg-01&sla_temp_c=75&horizon_minutes=15
+GET /efficiency/distributed-battery?site_id=aidc-sg-01&power_budget_kw=12500
+GET /efficiency/global-energy-routing
+GET /efficiency/optical-fabric?site_id=aidc-sg-01
+GET /efficiency/summary?site_id=aidc-sg-01
+```
+
+- `workload-scheduling`: QoS-aware co-location plan, fleet QoS ratio, parked nodes, baseline vs optimized power, and per-node consolidation gain.
+- `thermal-management`: hotspot predictions, fan-zone setpoints, and baseline vs optimized cooling power.
+- `distributed-battery`: peak windows, sustainable shave, and distributed vs centralized extra-server headroom.
+- `global-energy-routing`: per-region migration plan, green coverage before/after, and job-interruption reduction.
+- `optical-fabric`: per-link load, per-job migration plan, and speedup vs a legacy link.
+- `summary`: all five levers plus cross-layer insights and safety constraints.
 
 ### Evidence Package
 
@@ -577,7 +640,7 @@ npm run build:web
 
 Expected current status:
 
-- API tests: 18 passed
+- API tests: 29 passed
 - Web lint: passed
 - Web production build: passed
 
@@ -599,6 +662,10 @@ curl -s 'http://127.0.0.1:8000/digital-twin/aidc-sg-01/chip-simulation?rack_id=s
 curl -s -X POST http://127.0.0.1:8000/renewables/matching \
   -H 'Content-Type: application/json' \
   -d '{"site_id":"aidc-sg-01"}' | jq
+```
+
+```bash
+curl -s http://127.0.0.1:8000/efficiency/summary | jq '.levers[] | {lever, primary_value, reference_value}'
 ```
 
 ## Toolchain Notes

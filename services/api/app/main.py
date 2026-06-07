@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .calculations import (
+    CalculationError,
     allocate_embodied_component,
     calculate_cfe_matching,
     calculate_quota_status,
@@ -16,38 +17,66 @@ from .calculations import (
     calculate_twin_carbon_audit,
     generate_recommendations,
 )
+from .efficiency import (
+    METHOD_SUMMARY,
+    REFERENCE_BATTERY_EXTRA_PCT,
+    REFERENCE_INTERRUPTION_X,
+    REFERENCE_WORKLOAD_GAIN_PCT,
+    calculate_distributed_battery,
+    calculate_global_energy_routing,
+    calculate_optical_fabric,
+    calculate_thermal_management,
+    calculate_workload_scheduling,
+)
 from .models import (
     ApiMessage,
     CarbonAuditLine,
     ChipSimulationResponse,
     DataQualityFlag,
     DigitalTwinResponse,
+    DistributedBatteryResponse,
+    EfficiencyLever,
+    EfficiencyLeverSummary,
+    EfficiencySummaryResponse,
     EmissionRecord,
     EvidencePackage,
+    GlobalEnergyRoutingResponse,
     InventoryResponse,
     MatchingResponse,
     OmniverseFidelityPolicyResponse,
     MeterReading,
     MeterStream,
+    OpticalFabricResponse,
     OptimizerRequest,
     QuotaStatusResponse,
     RealtimeMetricsResponse,
     RenewableMatchingRequest,
     ScopeName,
     TelemetryIngestRequest,
+    ThermalManagementResponse,
+    WorkloadSchedulingResponse,
 )
 from .sample_data import (
+    BATTERY_CENTRALIZED_RIDETHROUGH_MIN,
+    BATTERY_ENERGY_KWH,
+    BATTERY_MAX_DISCHARGE_KW,
+    BATTERY_PER_SERVER_KW,
+    BATTERY_POWER_BUDGET_KW,
     SITE,
+    seed_battery_power_profile,
     seed_certificates,
     seed_campus_twin,
     seed_digital_twin_sources,
     seed_electrical_metering_system,
     seed_envelope_components,
+    seed_global_energy_regions,
     seed_grid_intensity,
     seed_hourly_energy,
     seed_lca_components,
     seed_meter_readings,
+    seed_migration_jobs,
     seed_omniverse_fidelity_policy,
+    seed_optical_links,
     seed_primary_cooling_system,
     seed_quota_policy,
 )
@@ -78,6 +107,10 @@ ENVELOPE_COMPONENTS = seed_envelope_components()
 PRIMARY_COOLING_SYSTEM = seed_primary_cooling_system()
 ELECTRICAL_METERING_SYSTEM = seed_electrical_metering_system()
 OMNIVERSE_FIDELITY_POLICY = seed_omniverse_fidelity_policy()
+BATTERY_POWER_PROFILE = seed_battery_power_profile()
+GLOBAL_ENERGY_REGIONS = seed_global_energy_regions()
+OPTICAL_LINKS = seed_optical_links()
+MIGRATION_JOBS = seed_migration_jobs()
 
 BASE_USED_KG_CO2E = 1_480_000.0
 OFFSETS_RETIRED_KG = 0.0
@@ -387,6 +420,182 @@ def optimizer_recommendations(payload: OptimizerRequest) -> list:
         quota_used_percent=quota.used_percent,
         gpu_utilization=gpu_utilization,
         allow_deferrable_workload_shift=payload.allow_deferrable_workload_shift,
+    )
+
+
+def _twin_servers(site_id: str) -> list:
+    return [server for room in _twin_rooms(site_id) for rack in room.racks for server in rack.servers]
+
+
+def _twin_chips(site_id: str) -> list:
+    return [chip for server in _twin_servers(site_id) for chip in server.chips]
+
+
+@app.get("/efficiency/workload-scheduling", response_model=WorkloadSchedulingResponse)
+def efficiency_workload_scheduling(
+    site_id: str = Query(default=SITE.id),
+    sla_util_cap: float = Query(default=0.85, ge=0.5, le=0.98),
+    allow_colocation: bool = Query(default=True),
+) -> WorkloadSchedulingResponse:
+    """Virtualization and QoS-aware co-location of SLA-sensitive services with
+    deferrable batch jobs using an improved Xen-style boost scheduler."""
+    try:
+        return calculate_workload_scheduling(
+            _twin_servers(site_id),
+            site_id=site_id,
+            sla_util_cap=sla_util_cap,
+            allow_colocation=allow_colocation,
+        )
+    except CalculationError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get("/efficiency/thermal-management", response_model=ThermalManagementResponse)
+def efficiency_thermal_management(
+    site_id: str = Query(default=SITE.id),
+    sla_temp_c: float = Query(default=75.0, ge=50, le=110),
+    horizon_minutes: int = Query(default=15, ge=1, le=120),
+) -> ThermalManagementResponse:
+    """Active thermal management: predict chip hotspots and co-schedule
+    workload placement with fan/cooling setpoints."""
+    try:
+        return calculate_thermal_management(
+            _twin_chips(site_id),
+            PRIMARY_COOLING_SYSTEM,
+            site_id=site_id,
+            sla_temp_c=sla_temp_c,
+            horizon_minutes=horizon_minutes,
+        )
+    except CalculationError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get("/efficiency/distributed-battery", response_model=DistributedBatteryResponse)
+def efficiency_distributed_battery(
+    site_id: str = Query(default=SITE.id),
+    power_budget_kw: float = Query(default=BATTERY_POWER_BUDGET_KW, gt=0),
+) -> DistributedBatteryResponse:
+    """Distributed server-level LiFePO4 UPS peak shaving that frees grid power
+    headroom for additional server deployment."""
+    try:
+        return calculate_distributed_battery(
+            BATTERY_POWER_PROFILE,
+            power_budget_kw=power_budget_kw,
+            battery_energy_kwh=BATTERY_ENERGY_KWH,
+            max_discharge_kw=BATTERY_MAX_DISCHARGE_KW,
+            per_server_kw=BATTERY_PER_SERVER_KW,
+            site_id=site_id,
+            centralized_ridethrough_minutes=BATTERY_CENTRALIZED_RIDETHROUGH_MIN,
+        )
+    except CalculationError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get("/efficiency/global-energy-routing", response_model=GlobalEnergyRoutingResponse)
+def efficiency_global_energy_routing() -> GlobalEnergyRoutingResponse:
+    """Green-aware global energy routing across geo-distributed sites using
+    renewable forecasts and wide-area workload migration."""
+    try:
+        return calculate_global_energy_routing(GLOBAL_ENERGY_REGIONS)
+    except CalculationError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get("/efficiency/optical-fabric", response_model=OpticalFabricResponse)
+def efficiency_optical_fabric(site_id: str = Query(default=SITE.id)) -> OpticalFabricResponse:
+    """High-speed optical migration fabric (40G/100G+/DWDM) for efficient data
+    movement and congestion relief."""
+    try:
+        return calculate_optical_fabric(OPTICAL_LINKS, MIGRATION_JOBS, site_id=site_id)
+    except CalculationError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get("/efficiency/summary", response_model=EfficiencySummaryResponse)
+def efficiency_summary(site_id: str = Query(default=SITE.id)) -> EfficiencySummaryResponse:
+    """Cross-layer efficiency overview tying together all five system levers."""
+    workload = calculate_workload_scheduling(_twin_servers(site_id), site_id=site_id)
+    thermal = calculate_thermal_management(_twin_chips(site_id), PRIMARY_COOLING_SYSTEM, site_id=site_id)
+    battery = calculate_distributed_battery(
+        BATTERY_POWER_PROFILE,
+        power_budget_kw=BATTERY_POWER_BUDGET_KW,
+        battery_energy_kwh=BATTERY_ENERGY_KWH,
+        max_discharge_kw=BATTERY_MAX_DISCHARGE_KW,
+        per_server_kw=BATTERY_PER_SERVER_KW,
+        site_id=site_id,
+        centralized_ridethrough_minutes=BATTERY_CENTRALIZED_RIDETHROUGH_MIN,
+    )
+    routing = calculate_global_energy_routing(GLOBAL_ENERGY_REGIONS)
+    optical = calculate_optical_fabric(OPTICAL_LINKS, MIGRATION_JOBS, site_id=site_id)
+
+    levers = [
+        EfficiencyLeverSummary(
+            lever=EfficiencyLever.WORKLOAD_SCHEDULING,
+            title="虚拟化与工作负载调度",
+            headline="SLA-sensitive + batch co-location on an improved Xen boost scheduler",
+            primary_metric="energy_saving_pct",
+            primary_value=workload.energy_saving_pct,
+            reference_value=REFERENCE_WORKLOAD_GAIN_PCT,
+            endpoint="/efficiency/workload-scheduling",
+            insight="Real-time QoS-ratio monitoring lets servers run hot without breaking SLAs, removing the need for overprovisioning.",
+        ),
+        EfficiencyLeverSummary(
+            lever=EfficiencyLever.THERMAL_MANAGEMENT,
+            title="热管理与冷却优化",
+            headline="Predictive hotspot detection co-scheduled with fan/cooling setpoints",
+            primary_metric="cooling_saving_pct",
+            primary_value=thermal.cooling_saving_pct,
+            reference_value=thermal.cooling_saving_pct,
+            endpoint="/efficiency/thermal-management",
+            insight="Anticipating hotspots avoids reactive fan overspeed; cooling power follows the affinity (cube) law.",
+        ),
+        EfficiencyLeverSummary(
+            lever=EfficiencyLever.DISTRIBUTED_BATTERY,
+            title="分布式电池技术",
+            headline="Distributed server-level LiFePO4 UPS shaves multi-hour power peaks",
+            primary_metric="extra_capacity_pct",
+            primary_value=battery.extra_capacity_pct,
+            reference_value=REFERENCE_BATTERY_EXTRA_PCT,
+            endpoint="/efficiency/distributed-battery",
+            insight="The data center becomes an energy-storage hub: batteries buffer peaks and renewable supply/demand mismatch.",
+        ),
+        EfficiencyLeverSummary(
+            lever=EfficiencyLever.GLOBAL_ENERGY_ROUTING,
+            title="全局分布式能源管理",
+            headline="Green forecast + green-aware WAN routing across geo-distributed sites",
+            primary_metric="interruption_reduction_x",
+            primary_value=routing.interruption_reduction_x,
+            reference_value=REFERENCE_INTERRUPTION_X,
+            endpoint="/efficiency/global-energy-routing",
+            insight="Software-defined efficiency: place compute where and when green energy is available, with a brown-power fallback.",
+        ),
+        EfficiencyLeverSummary(
+            lever=EfficiencyLever.OPTICAL_FABRIC,
+            title="光通信技术",
+            headline="High-speed optical links (40G/100G+/DWDM) for migration and congestion relief",
+            primary_metric="median_speedup_x",
+            primary_value=optical.median_speedup_x,
+            reference_value=optical.median_speedup_x,
+            endpoint="/efficiency/optical-fabric",
+            insight="Optical bandwidth is the enabler that makes intra-DC and cross-region workload mobility practical.",
+        ),
+    ]
+
+    return EfficiencySummaryResponse(
+        site_id=site_id,
+        generated_at=datetime.now(UTC),
+        method_version=METHOD_SUMMARY,
+        levers=levers,
+        cross_layer_insights=[
+            "能效与性能平衡：用实时 QoS 比率监控取代过度配置，是释放能效潜力的关键。",
+            "绿能利用的动态性：数据中心正演变为'储能中心'，分布式储能既削峰也平抑绿能供需错配。",
+            "软件定义的能效：硬件趋于固定能耗后，节能取决于软件如何感知温度、电力合约与网络带宽，动态调整算力的物理位置。",
+            "数据中心能效已是跨层协同的系统工程，而非单点硬件升级。",
+        ],
+        safety_constraints=[
+            "Efficiency estimates are operational guidance and never reduce audited Scope 1/2/3 emissions or SCI.",
+            "All levers preserve SLA, redundancy (N+1), data-residency, and chip thermal limits.",
+        ],
     )
 
 

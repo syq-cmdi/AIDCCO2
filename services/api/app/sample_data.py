@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 
-from .models import AccountingToolIntegration, BuildingTwin, CampusTwin, ChipTwin, CoolingEquipmentTwin, DataQualityFlag, DigitalTwinSource, ElectricalEquipmentTwin, EnergyCertificate, EnvelopeComponentTwin, GridCarbonIntensity, HourlyEnergy, LCAComponent, MeterReading, MeterStream, OmniverseFidelityPolicyResponse, PhotorealPipelineStage, PhotorealQualityGate, PhotorealToolIntegration, QuotaPolicy, RackTwin, RoomTwin, ServerTwin, Site, TwinVector3
+from .models import AccountingToolIntegration, BuildingTwin, CampusTwin, ChipTwin, CoolingEquipmentTwin, DataQualityFlag, DigitalTwinSource, ElectricalEquipmentTwin, EnergyCertificate, EnvelopeComponentTwin, GridCarbonIntensity, HourlyEnergy, LCAComponent, MeterReading, MeterStream, MigrationJob, OmniverseFidelityPolicyResponse, OpticalLink, PhotorealPipelineStage, PhotorealQualityGate, PhotorealToolIntegration, QuotaPolicy, RackTwin, RegionEnergyState, RoomTwin, ServerTwin, Site, TwinVector3, WorkloadClass
 
 
 SITE = Site(
@@ -884,5 +884,148 @@ def seed_electrical_metering_system() -> list[ElectricalEquipmentTwin]:
             geometry_ref="usd://aidc-sg-01/electrical/pdu-rack-a01",
             sensor_refs=["pdu://rack-a01/kwh", "pdu://rack-a01/outlet-current"],
             position=TwinVector3(x=-5.4, y=1.4, z=-1.7),
+        ),
+    ]
+
+
+# --------------------------------------------------------------------------
+# Cross-layer energy-efficiency seed inputs
+# --------------------------------------------------------------------------
+
+# Distributed server-level LiFePO4 UPS peak-shaving scenario. The facility load
+# stays under the grid power budget except for a multi-hour afternoon peak that
+# distributed batteries shave (a central UPS could only ride through minutes).
+BATTERY_POWER_BUDGET_KW = 12_500.0
+BATTERY_ENERGY_KWH = 9_000.0
+BATTERY_MAX_DISCHARGE_KW = 3_200.0
+BATTERY_PER_SERVER_KW = 3.2
+BATTERY_CENTRALIZED_RIDETHROUGH_MIN = 8.0
+BATTERY_POWER_PROFILE_KW = [
+    9_000, 8_600, 8_300, 8_100, 8_200, 8_800,
+    9_800, 10_800, 11_600, 12_100, 12_400, 12_200,
+    13_500, 14_000, 13_800, 12_300, 11_800, 11_200,
+    10_500, 9_800, 9_200, 8_800, 8_400, 8_000,
+]
+
+
+def seed_battery_power_profile() -> list[float]:
+    return [float(value) for value in BATTERY_POWER_PROFILE_KW]
+
+
+def seed_global_energy_regions() -> list[RegionEnergyState]:
+    return [
+        RegionEnergyState(
+            site_id="aidc-sg-01",
+            region="Singapore",
+            load_mw=12.0,
+            green_forecast_mw=4.0,
+            grid_ci_kg_per_kwh=0.41,
+            latency_class="regional",
+            deferrable_fraction=0.5,
+        ),
+        RegionEnergyState(
+            site_id="aidc-usw-01",
+            region="US West (solar)",
+            load_mw=8.0,
+            green_forecast_mw=12.0,
+            grid_ci_kg_per_kwh=0.22,
+            latency_class="global",
+            deferrable_fraction=0.5,
+        ),
+        RegionEnergyState(
+            site_id="aidc-eun-01",
+            region="EU North (wind)",
+            load_mw=9.0,
+            green_forecast_mw=13.0,
+            grid_ci_kg_per_kwh=0.16,
+            latency_class="global",
+            deferrable_fraction=0.45,
+        ),
+        RegionEnergyState(
+            site_id="aidc-use-01",
+            region="US East",
+            load_mw=11.0,
+            green_forecast_mw=6.0,
+            grid_ci_kg_per_kwh=0.34,
+            latency_class="regional",
+            deferrable_fraction=0.4,
+        ),
+    ]
+
+
+def seed_optical_links() -> list[OpticalLink]:
+    return [
+        OpticalLink(
+            link_id="spine-100g",
+            scope="intra_dc",
+            endpoint_a="sg-b1-hall-a",
+            endpoint_b="sg-b1-hall-b",
+            capacity_gbps=100.0,
+            distance_km=0.3,
+            wavelengths=4,
+        ),
+        OpticalLink(
+            link_id="leaf-40g",
+            scope="intra_dc",
+            endpoint_a="sg-b1-hall-b-row-c",
+            endpoint_b="sg-b1-hall-b-cdu",
+            capacity_gbps=40.0,
+            distance_km=0.1,
+            wavelengths=1,
+        ),
+        OpticalLink(
+            link_id="dwdm-sg-eu",
+            scope="inter_region",
+            endpoint_a="aidc-sg-01",
+            endpoint_b="aidc-eun-01",
+            capacity_gbps=400.0,
+            distance_km=9_500.0,
+            wavelengths=8,
+        ),
+        OpticalLink(
+            link_id="coherent-sg-us",
+            scope="inter_region",
+            endpoint_a="aidc-sg-01",
+            endpoint_b="aidc-usw-01",
+            capacity_gbps=100.0,
+            distance_km=15_000.0,
+            wavelengths=4,
+        ),
+    ]
+
+
+def seed_migration_jobs() -> list[MigrationJob]:
+    return [
+        MigrationJob(
+            job_id="checkpoint-flush",
+            source="sg-b1-hall-a",
+            target="sg-b1-hall-b",
+            data_gb=8_000.0,
+            deadline_s=1_800.0,
+            priority=WorkloadClass.BATCH,
+        ),
+        MigrationJob(
+            job_id="live-state-mirror",
+            source="sg-b1-hall-a",
+            target="sg-b1-hall-b",
+            data_gb=150.0,
+            deadline_s=30.0,
+            priority=WorkloadClass.SLA_SENSITIVE,
+        ),
+        MigrationJob(
+            job_id="model-shard-sync",
+            source="aidc-sg-01",
+            target="aidc-eun-01",
+            data_gb=30_000.0,
+            deadline_s=1_800.0,
+            priority=WorkloadClass.BATCH,
+        ),
+        MigrationJob(
+            job_id="dataset-replicate",
+            source="aidc-sg-01",
+            target="aidc-usw-01",
+            data_gb=50_000.0,
+            deadline_s=5_000.0,
+            priority=WorkloadClass.BATCH,
         ),
     ]

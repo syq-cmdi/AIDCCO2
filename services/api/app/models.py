@@ -588,3 +588,272 @@ class ApiMessage(BaseModel):
     status: str
     detail: str
     data: dict[str, Any] = Field(default_factory=dict)
+
+
+# --------------------------------------------------------------------------
+# Cross-layer energy-efficiency upgrade
+#
+# These models extend the carbon platform with the system-level efficiency
+# levers studied in data-center energy-efficiency research: virtualization and
+# QoS-aware workload co-location, active thermal/cooling co-scheduling,
+# distributed server-level battery peak shaving, green-aware global load
+# routing, and a high-speed optical migration fabric. They stay separate from
+# the audited carbon inventory: efficiency estimates are operational guidance
+# and never reduce physical Scope 1/2/3 emissions or SCI.
+# --------------------------------------------------------------------------
+
+
+class WorkloadClass(StrEnum):
+    SLA_SENSITIVE = "sla_sensitive"
+    BATCH = "batch"
+
+
+class EfficiencyLever(StrEnum):
+    WORKLOAD_SCHEDULING = "workload_scheduling"
+    THERMAL_MANAGEMENT = "thermal_management"
+    DISTRIBUTED_BATTERY = "distributed_battery"
+    GLOBAL_ENERGY_ROUTING = "global_energy_routing"
+    OPTICAL_FABRIC = "optical_fabric"
+
+
+# ---- 1. Virtualization and QoS-aware workload scheduling ----
+
+
+class ColocationServerPlan(BaseModel):
+    server_id: str
+    foreground_class: WorkloadClass
+    background_class: WorkloadClass | None
+    baseline_utilization: float
+    colocated_utilization: float
+    absorbed_batch_kw: float
+    qos_ratio: float
+    sla_respected: bool
+    scheduler_mode: str
+    baseline_power_kw: float
+    colocated_power_kw: float
+    state: Literal["host", "parked"]
+
+
+class WorkloadSchedulingResponse(BaseModel):
+    site_id: str
+    generated_at: datetime
+    scheduler: str
+    method_version: str
+    reference_efficiency_gain_pct: float
+    servers_total: int
+    sla_servers: int
+    batch_servers: int
+    servers_parked: int
+    fleet_qos_ratio: float
+    min_qos_ratio: float
+    sla_target_qos: float
+    sla_violations: int
+    baseline_power_kw: float
+    optimized_power_kw: float
+    energy_saving_pct: float
+    peak_node_efficiency_gain_pct: float
+    server_plans: list[ColocationServerPlan]
+    safety_constraints: list[str]
+    notes: list[str]
+
+
+# ---- 2. Active thermal management and cooling co-scheduling ----
+
+
+class HotspotPrediction(BaseModel):
+    chip_id: str
+    server_id: str
+    chip_type: str
+    current_hotspot_c: float
+    predicted_hotspot_c: float
+    headroom_c: float
+    risk: Literal["nominal", "watch", "throttle_risk"]
+    recommended_action: str
+
+
+class FanZoneSetpoint(BaseModel):
+    zone_id: str
+    equipment_type: str
+    baseline_speed_pct: float
+    optimized_speed_pct: float
+    baseline_power_kw: float
+    optimized_power_kw: float
+    bound_by: str
+
+
+class ThermalManagementResponse(BaseModel):
+    site_id: str
+    generated_at: datetime
+    method_version: str
+    horizon_minutes: int
+    sla_temp_c: float
+    chips_evaluated: int
+    hotspots_flagged: int
+    current_max_hotspot_c: float
+    predicted_max_hotspot_c: float
+    baseline_cooling_kw: float
+    optimized_cooling_kw: float
+    cooling_saving_pct: float
+    workload_migrations: list[str]
+    hotspot_predictions: list[HotspotPrediction]
+    fan_zones: list[FanZoneSetpoint]
+    safety_constraints: list[str]
+
+
+# ---- 3. Distributed server-level battery peak shaving ----
+
+
+class PeakWindow(BaseModel):
+    start_index: int
+    duration_hours: int
+    peak_kw: float
+    energy_above_budget_kwh: float
+    covered_by_battery: bool
+
+
+class DistributedBatteryResponse(BaseModel):
+    site_id: str
+    generated_at: datetime
+    method_version: str
+    chemistry: str
+    reference_extra_capacity_pct: float
+    power_budget_kw: float
+    observed_peak_kw: float
+    shaved_peak_kw: float
+    sustainable_shave_kw: float
+    battery_energy_kwh: float
+    max_discharge_kw: float
+    longest_peak_hours: int
+    per_server_kw: float
+    extra_servers_distributed: int
+    extra_servers_centralized: int
+    extra_capacity_pct: float
+    centralized_ridethrough_minutes: float
+    peak_windows: list[PeakWindow]
+    notes: list[str]
+
+
+# ---- 4. Green-aware global energy routing ----
+
+
+class RegionEnergyState(BaseModel):
+    site_id: str
+    region: str
+    load_mw: float = Field(ge=0)
+    green_forecast_mw: float = Field(ge=0)
+    grid_ci_kg_per_kwh: float = Field(ge=0)
+    latency_class: Literal["edge", "regional", "global"]
+    deferrable_fraction: float = Field(ge=0, le=1)
+
+
+class RegionRoutingPlan(BaseModel):
+    site_id: str
+    region: str
+    load_before_mw: float
+    load_after_mw: float
+    migrated_in_mw: float
+    migrated_out_mw: float
+    green_coverage_before: float
+    green_coverage_after: float
+    grid_ci_kg_per_kwh: float
+
+
+class GlobalEnergyRoutingResponse(BaseModel):
+    generated_at: datetime
+    method_version: str
+    reference_interruption_reduction_x: float
+    total_load_mw: float
+    total_green_mw: float
+    green_coverage_before: float
+    green_coverage_after: float
+    migrated_load_mw: float
+    job_interruptions_before: int
+    job_interruptions_after: int
+    interruption_reduction_x: float
+    avoided_brown_mwh_per_hour: float
+    region_plans: list[RegionRoutingPlan]
+    safety_constraints: list[str]
+
+
+# ---- 5. High-speed optical migration fabric ----
+
+
+class OpticalLink(BaseModel):
+    link_id: str
+    scope: Literal["intra_dc", "inter_region"]
+    endpoint_a: str
+    endpoint_b: str
+    capacity_gbps: float = Field(gt=0)
+    distance_km: float = Field(ge=0)
+    wavelengths: int = Field(ge=1)
+
+
+class MigrationJob(BaseModel):
+    job_id: str
+    source: str
+    target: str
+    data_gb: float = Field(gt=0)
+    deadline_s: float = Field(gt=0)
+    priority: WorkloadClass
+
+
+class OpticalLinkLoad(BaseModel):
+    link_id: str
+    scope: str
+    capacity_gbps: float
+    offered_gbps: float
+    utilization: float
+    congested: bool
+
+
+class MigrationPlan(BaseModel):
+    job_id: str
+    link_id: str
+    data_gb: float
+    throughput_gbps: float
+    transfer_seconds: float
+    meets_deadline: bool
+    legacy_transfer_seconds: float
+    speedup_x: float
+
+
+class OpticalFabricResponse(BaseModel):
+    site_id: str
+    generated_at: datetime
+    method_version: str
+    legacy_link_gbps: float
+    aggregate_capacity_gbps: float
+    aggregate_offered_gbps: float
+    fabric_utilization: float
+    congested_links: int
+    jobs_meeting_deadline: int
+    jobs_total: int
+    median_speedup_x: float
+    energy_per_gb_optical_j: float
+    energy_per_gb_electrical_j: float
+    link_loads: list[OpticalLinkLoad]
+    migration_plans: list[MigrationPlan]
+    notes: list[str]
+
+
+# ---- Combined cross-layer efficiency summary ----
+
+
+class EfficiencyLeverSummary(BaseModel):
+    lever: EfficiencyLever
+    title: str
+    headline: str
+    primary_metric: str
+    primary_value: float
+    reference_value: float
+    endpoint: str
+    insight: str
+
+
+class EfficiencySummaryResponse(BaseModel):
+    site_id: str
+    generated_at: datetime
+    method_version: str
+    levers: list[EfficiencyLeverSummary]
+    cross_layer_insights: list[str]
+    safety_constraints: list[str]

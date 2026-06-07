@@ -1,4 +1,4 @@
-import type { ChipSimulationResponse, ChipTwin, DigitalTwinResponse, MatchingResult, OmniverseFidelityPolicy, QuotaStatus, RackTwin, RealtimeMetrics, ServerTwin } from "./api";
+import type { ChipSimulationResponse, ChipTwin, DigitalTwinResponse, EfficiencySummaryResponse, MatchingResult, OmniverseFidelityPolicy, QuotaStatus, RackTwin, RealtimeMetrics, ServerTwin } from "./api";
 
 export const fallbackRealtime: RealtimeMetrics = {
   site_id: "aidc-sg-01",
@@ -83,6 +83,74 @@ export const fallbackMatching: MatchingResult = {
   avoided_emissions_kg_co2e: 6420,
   unmatched_load_kwh: 7900,
   duplicate_certificate_ids: []
+};
+
+export const fallbackEfficiencySummary: EfficiencySummaryResponse = {
+  site_id: "aidc-sg-01",
+  generated_at: "2026-06-07T00:00:00Z",
+  method_version: "cross-layer-efficiency-v0.1",
+  levers: [
+    {
+      lever: "workload_scheduling",
+      title: "虚拟化与工作负载调度",
+      headline: "SLA-sensitive + batch co-location on an improved Xen boost scheduler",
+      primary_metric: "energy_saving_pct",
+      primary_value: 0.1,
+      reference_value: 0.7,
+      endpoint: "/efficiency/workload-scheduling",
+      insight: "Real-time QoS-ratio monitoring lets servers run hot without breaking SLAs, removing the need for overprovisioning."
+    },
+    {
+      lever: "thermal_management",
+      title: "热管理与冷却优化",
+      headline: "Predictive hotspot detection co-scheduled with fan/cooling setpoints",
+      primary_metric: "cooling_saving_pct",
+      primary_value: 0.36,
+      reference_value: 0.36,
+      endpoint: "/efficiency/thermal-management",
+      insight: "Anticipating hotspots avoids reactive fan overspeed; cooling power follows the affinity (cube) law."
+    },
+    {
+      lever: "distributed_battery",
+      title: "分布式电池技术",
+      headline: "Distributed server-level LiFePO4 UPS shaves multi-hour power peaks",
+      primary_metric: "extra_capacity_pct",
+      primary_value: 0.24,
+      reference_value: 0.24,
+      endpoint: "/efficiency/distributed-battery",
+      insight: "The data center becomes an energy-storage hub: batteries buffer peaks and renewable supply/demand mismatch."
+    },
+    {
+      lever: "global_energy_routing",
+      title: "全局分布式能源管理",
+      headline: "Green forecast + green-aware WAN routing across geo-distributed sites",
+      primary_metric: "interruption_reduction_x",
+      primary_value: 4.2,
+      reference_value: 5,
+      endpoint: "/efficiency/global-energy-routing",
+      insight: "Software-defined efficiency: place compute where and when green energy is available, with a brown-power fallback."
+    },
+    {
+      lever: "optical_fabric",
+      title: "光通信技术",
+      headline: "High-speed optical links (40G/100G+/DWDM) for migration and congestion relief",
+      primary_metric: "median_speedup_x",
+      primary_value: 10,
+      reference_value: 10,
+      endpoint: "/efficiency/optical-fabric",
+      insight: "Optical bandwidth is the enabler that makes intra-DC and cross-region workload mobility practical."
+    }
+  ],
+  cross_layer_insights: [
+    "能效与性能平衡：用实时 QoS 比率监控取代过度配置，是释放能效潜力的关键。",
+    "绿能利用的动态性：数据中心正演变为'储能中心'，分布式储能既削峰也平抑绿能供需错配。",
+    "软件定义的能效：硬件趋于固定能耗后，节能取决于软件如何感知温度、电力合约与网络带宽，动态调整算力的物理位置。",
+    "数据中心能效已是跨层协同的系统工程，而非单点硬件升级。"
+  ],
+  safety_constraints: [
+    "Efficiency estimates are operational guidance and never reduce audited Scope 1/2/3 emissions or SCI.",
+    "All levers preserve SLA, redundancy (N+1), data-residency, and chip thermal limits."
+  ]
 };
 
 export const hourlyCarbon = [468, 452, 441, 430, 398, 376, 344, 318, 290, 266, 238, 224, 236, 258, 286, 330, 382, 438, 478, 492, 510, 502, 486, 474];

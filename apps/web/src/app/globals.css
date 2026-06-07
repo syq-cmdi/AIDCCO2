@@ -3128,3 +3128,128 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Cross-layer efficiency engine view */
+.efficiency-workspace {
+  grid-template-columns: 1fr;
+}
+
+.efficiency-panel {
+  padding: 20px;
+}
+
+.efficiency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.efficiency-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.efficiency-card h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.efficiency-card__value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.efficiency-card__value strong {
+  font-size: 30px;
+  color: var(--green);
+  line-height: 1;
+}
+
+.efficiency-card__value small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.efficiency-card__headline {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.efficiency-card__insight {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.efficiency-card code {
+  font-size: 11px;
+  color: var(--slate);
+  background: var(--slate-soft);
+  border-radius: 4px;
+  padding: 3px 6px;
+  align-self: flex-start;
+}
+
+.efficiency-insights {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.efficiency-insights h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.efficiency-insights ul,
+.efficiency-constraints {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.efficiency-insights li {
+  font-size: 13px;
+  color: var(--slate);
+  line-height: 1.5;
+  padding-left: 16px;
+  position: relative;
+}
+
+.efficiency-insights li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.efficiency-constraints {
+  margin-top: 14px;
+}
+
+.efficiency-constraints li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
