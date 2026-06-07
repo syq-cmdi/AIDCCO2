@@ -11,6 +11,7 @@ import {
   Gauge,
   Globe2,
   HardDrive,
+  Layers,
   Leaf,
   Link as LinkIcon,
   MonitorCog,
@@ -20,8 +21,8 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import CampusScene from "../../components/CampusScene";
-import { loadDigitalTwin, loadMatching, loadQuotaStatus, loadRealtimeMetrics, type DigitalTwinResponse, type MatchingResult, type QuotaStatus, type RealtimeMetrics } from "../../lib/api";
-import { cfeMatched, fallbackDigitalTwin, fallbackMatching, fallbackQuota, fallbackRealtime, hourlyCarbon, hourlyLoad } from "../../lib/sample";
+import { loadDigitalTwin, loadEfficiencySummary, loadMatching, loadQuotaStatus, loadRealtimeMetrics, type DigitalTwinResponse, type EfficiencySummaryResponse, type MatchingResult, type QuotaStatus, type RealtimeMetrics } from "../../lib/api";
+import { cfeMatched, fallbackDigitalTwin, fallbackEfficiencySummary, fallbackMatching, fallbackQuota, fallbackRealtime, hourlyCarbon, hourlyLoad } from "../../lib/sample";
 
 type BigKpiProps = {
   label: string;
@@ -102,6 +103,7 @@ export default function BigscreenPage() {
   const [quota, setQuota] = useState<QuotaStatus>(fallbackQuota);
   const [matching, setMatching] = useState<MatchingResult>(fallbackMatching);
   const [digitalTwin, setDigitalTwin] = useState<DigitalTwinResponse>(fallbackDigitalTwin);
+  const [efficiency, setEfficiency] = useState<EfficiencySummaryResponse>(fallbackEfficiencySummary);
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -113,7 +115,7 @@ export default function BigscreenPage() {
   useEffect(() => {
     let isMounted = true;
     const load = () => {
-      Promise.all([loadRealtimeMetrics(), loadQuotaStatus(), loadMatching(), loadDigitalTwin()]).then(([metricsResult, quotaResult, matchingResult, twinResult]) => {
+      Promise.all([loadRealtimeMetrics(), loadQuotaStatus(), loadMatching(), loadDigitalTwin(), loadEfficiencySummary()]).then(([metricsResult, quotaResult, matchingResult, twinResult, efficiencyResult]) => {
         if (!isMounted) {
           return;
         }
@@ -121,6 +123,7 @@ export default function BigscreenPage() {
         if (quotaResult) setQuota(quotaResult);
         if (matchingResult) setMatching(matchingResult);
         if (twinResult) setDigitalTwin(twinResult);
+        if (efficiencyResult) setEfficiency(efficiencyResult);
       });
     };
     load();
@@ -163,6 +166,8 @@ export default function BigscreenPage() {
   const marketTco2 = metric(metrics, "market_based_emissions_kg", 5024) / 1000;
   const cfeScore = matching.cfe_score * 100;
   const usedPercent = Math.min(quota.used_percent, 100);
+  const formatLever = (metricName: string, value: number) =>
+    metricName.endsWith("_x") ? `${formatNumber(value, 1)}×` : `${formatNumber(value * 100, 0)}%`;
 
   return (
     <main className="bigscreen-page">
@@ -312,6 +317,22 @@ export default function BigscreenPage() {
                 <strong>{formatNumber(cue, 2)} / {formatNumber(wue, 2)}</strong>
                 <small>kgCO2e-ITkWh / L-ITkWh</small>
               </article>
+            </div>
+          </section>
+
+          <section className="big-panel">
+            <div className="big-panel__head">
+              <span>跨层能效工程</span>
+              <Layers size={20} />
+            </div>
+            <div className="big-efficiency-grid">
+              {efficiency.levers.map((lever) => (
+                <article key={lever.lever}>
+                  <span>{lever.title}</span>
+                  <strong>{formatLever(lever.primary_metric, lever.primary_value)}</strong>
+                  <small>参考 {formatLever(lever.primary_metric, lever.reference_value)}</small>
+                </article>
+              ))}
             </div>
           </section>
         </aside>
