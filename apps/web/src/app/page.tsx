@@ -1108,6 +1108,7 @@ export default function DashboardPage() {
             <span className="status-dot" />
             <span>{metrics.site_id}</span>
             <span>{new Date(metrics.generated_at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
+            <a className="topbar-screen-link" href="/council">Agent议会</a>
             <a className="topbar-screen-link" href="/bupt-ai">BUPT.AI子站</a>
             <a className="topbar-screen-link" href="/bms">动环监控</a>
             <a className="topbar-screen-link" href="/bigscreen">园区大屏</a>

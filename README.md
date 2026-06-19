@@ -15,9 +15,10 @@ The current implementation targets an AIDC / AI Data Center campus. It combines:
 
 ## Current Screens
 
-The app exposes three main operator surfaces:
+The app exposes four main operator surfaces:
 
 - `/`: operational carbon workbench for KPI cards, cabinet/server/chip twin inspection, lifecycle inventory, quota risk, CFE matching, AI optimization, and evidence status.
+- `/council`: AI Energy Agent Council — a deterministic multi-agent deliberation board where six domain agents (accounting, grid/CFE, cooling, compute, compliance, lifecycle) read the live state, file findings and motions, vote, resolve cross-domain conflicts, and produce a ranked, auditable decarbonization decision package.
 - `/bigscreen`: campus carbon command center for a 16:9 wall display, with 3D campus overview, real-time carbon/electricity/cooling/water indicators, quota/CFE rings, alerts, and MEP summaries.
 - `/bms`: Siemens/Honeywell-style industrial dynamic environment monitoring interface, including machine-room floor plan, rack/sensor overlays, cooling P&ID, system parameter settings, alarm radar, CCTV strip, and BMS/EPMS protocol status.
 
@@ -39,6 +40,7 @@ Generated screenshots are stored under `artifacts/`:
 ### 中文页面入口
 
 - `/`：运营工作台，展示 PUE、CUE、WUE、REF、Scope 1/2/3、配额风险、24/7 CFE 匹配、AI 优化建议和证据包状态。
+- `/council`：AI 能源 Agent 议会，由碳核算、电网/CFE、冷源、算力、合规、生命周期六位领域 agent 读取实时口径，提出 findings 与动议、加权表决、裁决跨域冲突，输出可审计、可执行的降碳决策包（详见 `docs/agent-council.md`）。
 - `/bigscreen`：园区级数字大屏，用于指挥中心或大屏墙，包含高真实感 Three.js 园区数字孪生、实时碳流、电力、冷却、水、配额和 CFE 监控。
 - `/bms`：工业动环监控界面，风格参考西门子 / Honeywell 类 BMS、EPMS、冷源群控系统，包含机房平面图、冷冻水 / 冷却水 P&ID、参数设定、告警、CCTV 和协议状态。
 
@@ -142,21 +144,25 @@ flowchart LR
 .
 ├── apps/web
 │   ├── src/app/page.tsx              # operational carbon workbench
+│   ├── src/app/council/page.tsx      # AI energy agent council deliberation board
 │   ├── src/app/bigscreen/page.tsx    # campus command-center bigscreen
 │   ├── src/app/bms/page.tsx          # industrial BMS / SCADA-style monitoring
 │   ├── src/components/TwinScene.tsx  # cabinet/server/chip 3D twin
 │   ├── src/components/CampusScene.tsx# campus 3D twin
+│   ├── src/lib/council.ts            # deterministic agent-council engine (web)
 │   └── src/lib                      # API types and fallback sample data
 ├── services/api
 │   ├── app/main.py                   # FastAPI endpoints
 │   ├── app/models.py                 # Pydantic domain models
 │   ├── app/calculations.py           # accounting and matching formulas
+│   ├── app/council.py                # agent-council deliberation engine (API)
 │   ├── app/sample_data.py            # demo site, telemetry, twin, MEP data
-│   └── tests                         # API and formula tests
+│   └── tests                         # API, formula, and council tests
 ├── db/schema.sql                     # TimescaleDB/PostGIS persistence schema
 ├── infra/docker-compose.yml          # TimescaleDB, Redpanda, MinIO
 ├── docs
 │   ├── methodology.md
+│   ├── agent-council.md
 │   ├── digital-twin-toolchain.md
 │   ├── omniverse-fidelity-policy.md
 │   └── photoreal-material-and-mep-model.md
@@ -213,6 +219,23 @@ Quota monitoring supports:
 - compliance gap
 - carbon price risk
 - dispatch hints for decarbonization
+
+### Agent Council Governance
+
+The `/council` screen and the `/council/deliberation` endpoint run a
+deterministic six-agent deliberation over the live state and emit a ranked,
+auditable decision package:
+
+- per-agent findings with stance, severity, and the metrics each agent cites
+- motions with annual abatement (tCO2e), capex, effort, horizon, and constraints
+- a weighted support/oppose/abstain vote per motion, with consensus labels
+- explicit cross-domain conflict rulings (thermal vs density, market claims vs
+  accounting integrity, liquid-cooling capex vs embodied carbon)
+- a chair summary: 1.5°C alignment score, total adopted abatement, P0 count,
+  confidence, top risks, and recorded dissents
+
+The web and API engines share constants and logic, so the council renders
+identically with or without the backend. See `docs/agent-council.md`.
 
 ### Digital Twin Hierarchy
 
@@ -414,6 +437,21 @@ Content-Type: application/json
 ```
 
 Returns AI decarbonization suggestions with baseline, estimated reduction, confidence, safety constraints, and rationale.
+
+### Agent Council Deliberation
+
+```http
+GET /council/deliberation?site_id=aidc-sg-01&gpu_utilization=0.58
+```
+
+Runs the AI Energy Agent Council over the live metrics, quota, and 24/7 CFE
+state. Returns the full deliberation session: agent roster, per-agent findings
+(stance, severity, cited metrics), motions with abatement/capex/effort/horizon,
+a weighted vote per motion, cross-domain conflict rulings, a ranked resolution
+package (priority, decision, owner), and a chair summary (1.5C alignment score,
+total abatement, P0 count, risks, dissents). The engine is deterministic and is
+mirrored in the web app (`apps/web/src/lib/council.ts`) so the `/council` screen
+renders identically with or without the backend. See `docs/agent-council.md`.
 
 ### Evidence Package
 
