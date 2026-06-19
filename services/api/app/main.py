@@ -16,6 +16,7 @@ from .calculations import (
     calculate_twin_carbon_audit,
     generate_recommendations,
 )
+from .council import CouncilSession, build_council_state, deliberate
 from .models import (
     ApiMessage,
     CarbonAuditLine,
@@ -388,6 +389,30 @@ def optimizer_recommendations(payload: OptimizerRequest) -> list:
         gpu_utilization=gpu_utilization,
         allow_deferrable_workload_shift=payload.allow_deferrable_workload_shift,
     )
+
+
+@app.get("/council/deliberation", response_model=CouncilSession)
+def council_deliberation(
+    site_id: str = Query(default=SITE.id),
+    gpu_utilization: float = Query(default=0.58, ge=0.0, le=1.0),
+) -> CouncilSession:
+    metrics = _current_metrics(site_id)
+    matching = calculate_cfe_matching(HOURLY_ENERGY)
+    quota = quota_status(site_id)
+    state = build_council_state(
+        site_id=site_id,
+        generated_at=datetime.now(UTC).isoformat(),
+        metrics={key: metric.value for key, metric in metrics.items()},
+        cfe_score=float(matching["cfe_score"]),
+        annual_match_ratio=float(matching["annual_match_ratio"]),
+        quota_used_percent=quota.used_percent,
+        forecast_exceedance=quota.forecast_exceedance_date.isoformat()
+        if quota.forecast_exceedance_date
+        else None,
+        carbon_price_risk_usd=quota.carbon_price_risk_usd,
+        gpu_utilization=gpu_utilization,
+    )
+    return deliberate(state)
 
 
 @app.get("/evidence/packages/{period}", response_model=EvidencePackage)
